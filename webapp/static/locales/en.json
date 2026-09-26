@@ -16,6 +16,8 @@
   "shell.selectLocation": "Choose location",
   "shell.locationHint": "Local timings and planetary positions use this place.",
   "shell.home": "Ghadi home",
+  "shell.brandName": "GHADI",
+  "shell.brandDescriptor": "An Indian Cosmic Calendar",
   "shell.toggleTheme": "Toggle theme",
   "shell.settings": "Open settings",
   "shell.primaryNavigation": "Primary navigation",

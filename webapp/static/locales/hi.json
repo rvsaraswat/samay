@@ -16,6 +16,8 @@
   "shell.selectLocation": "स्थान चुनें",
   "shell.locationHint": "स्थानीय समय और ग्रहों की स्थिति इसी स्थान के अनुसार होगी।",
   "shell.home": "घड़ी का मुखपृष्ठ",
+  "shell.brandName": "घड़ी",
+  "shell.brandDescriptor": "भारतीय खगोलीय पंचांग · An Indian Cosmic Calendar",
   "shell.toggleTheme": "थीम बदलें",
   "shell.settings": "सेटिंग्स खोलें",
   "shell.primaryNavigation": "मुख्य नेविगेशन",
