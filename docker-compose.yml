@@ -1,30 +1,27 @@
 services:
-  backend:
+  ghadi:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: webapp/Dockerfile
     ports:
-      - "28000:28000"
+      - "${GHADI_PORT:-31873}:8080"
     environment:
-      - DATABASE_URL=sqlite:///./vedic_clock.db
-      - SECRET_KEY=ghadi-local-development-secret-key-change-me-32chars
-      - FRONTEND_ORIGINS=http://localhost:3001,http://localhost:3002
-    volumes:
-      - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 28000
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        API_BASE_URL: ${API_BASE_URL:-http://localhost:28000}
-    ports:
-      - "${FRONTEND_PORT:-3001}:80"
-    restart: always
-    depends_on:
-      - backend
+      PORT: "8080"
+      SE_EPHE_PATH: /app/ephe
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

@@ -185,4 +185,22 @@ original [Vedanga Jyotisha](https://archive.org/details/VedangaJyotisa) (~1200
 BCE) and [Surya Siddhanta](https://archive.org/details/in.ernet.dli.2015.69065)
 (~400 CE) are purely astronomical.
 
+Production Docker deployment
+-----------------------------
+
+The production Compose service runs the Flask/Gunicorn web application on host
+port `31873` by default. Change the host port when necessary without changing
+the container port:
+
+```sh
+git pull origin main
+GHADI_PORT=31873 docker compose up -d --build
+docker compose ps
+curl http://127.0.0.1:31873/
+```
+
+The image runs as a non-root user, has no source-code bind mounts, and includes
+a container health check. Set `GHADI_PORT` to another unused host port when a
+service is already using `31873`.
+
 [1]: https://en.wikipedia.org/wiki/Fringe_science
