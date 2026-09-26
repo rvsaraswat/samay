@@ -366,18 +366,18 @@ def draw_header(pdf, location, year, month, amanta, coordinate_selection, year_l
   # Attribution stamp below ruleset line (dynamic year)
   from datetime import date as DateType
   current_year = DateType.today().year
-  stamp_text = f"Drik Panchanga · Copyright © Satish BD {current_year} · AGPL-3.0"
-  link_text = "Drik Panchanga"
+  stamp_text = f"Ghadi · based on Drik Panchanga · Copyright © Satish BD {current_year} · AGPL-3.0"
+  link_text = "Ghadi"
   pdf.setFillColor(_GREY_AAAAAA)
   pdf.setFont(PDF_FONT, 5.5)
   text_width = pdf.stringWidth(stamp_text, PDF_FONT, 5.5)
   link_width = pdf.stringWidth(link_text, PDF_FONT, 5.5)
   x_right = PAGE_W - MARGIN
   pdf.drawRightString(x_right, top - 52, stamp_text)
-  # Make "Drik Panchanga" a hyperlink to GitHub repo
+  # Make "Ghadi" a hyperlink to GitHub repo
   link_x = x_right - text_width
   pdf.linkURL(
-    "https://github.com/bdsatish/drik-panchanga",
+    "https://github.com/rvsaraswat/samay",
     (link_x, top - 56, link_x + link_width, top - 47),
     relative=0,
     thickness=0,
@@ -778,8 +778,8 @@ def argument_parser():
 def _check_reportlab():
   if canvas is None:
     raise ImportError(
-      "drik-panchanga[pdf] is required for PDF generation. "
-      "Install it with: pip install drik-panchanga[pdf]", )
+      "ghadi[pdf] is required for PDF generation. "
+      "Install it with: pip install 'ghadi[pdf]'", )
 
 
 def main(argv=None):

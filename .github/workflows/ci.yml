@@ -148,8 +148,8 @@ jobs:
           assert not forbidden, f"webapp leaked into wheel: {forbidden}"
           entry = next(n for n in names if n.endswith("entry_points.txt"))
           text = zipfile.ZipFile(wheel).read(entry).decode()
-          assert "drik-panchanga-short" in text, "missing drik-panchanga-short entry point"
-          assert "drik-panchanga-long" in text, "missing drik-panchanga-long entry point"
+          assert "ghadi-short" in text, "missing ghadi-short entry point"
+          assert "ghadi-long" in text, "missing ghadi-long entry point"
           print("wheel contents OK")
           PY
 
@@ -166,12 +166,12 @@ jobs:
 
       - name: Install wheel with [pdf] extra and smoke-test CLI
         run: |
-          pip install "drik-panchanga[pdf] @ file://$(ls "$PWD"/dist/*.whl)"
+          pip install "ghadi[pdf] @ file://$(ls "$PWD"/dist/*.whl)"
           cd "$(mktemp -d)"
-          drik-panchanga-short --help
-          drik-panchanga-long --help
-          drik-panchanga-short --city Ujjain --start 2026-03
-          drik-panchanga-long --city Ujjain --start 2026-03
+          ghadi-short --help
+          ghadi-long --help
+          ghadi-short --city Ujjain --start 2026-03
+          ghadi-long --city Ujjain --start 2026-03
           test -s ujjain-in_panchanga_2026-03_to_2027-04.pdf
           test -s ujjain-in_panchanga_wall_2026-03_to_2027-02.pdf
 

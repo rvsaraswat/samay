@@ -1,8 +1,8 @@
-Drik Panchanga
+Ghadi
 ==============
 
-Observational Indian lunisolar calendar (Hindu Drig-ganita Panchanga) using
-the Swiss Ephemeris.
+An observational Indian lunisolar calendar (Hindu Drig-ganita Panchanga) using
+the Swiss Ephemeris, rebranded as Ghadi from the Drik Panchanga engine.
 
 Computes the five essentials — tithi, nakshatra, yoga, karana, vaara — with
 end times, plus sunrise, sunset, moonrise and moonset
@@ -16,11 +16,11 @@ sunrise to sunrise. Format with ``datetime_helper.format_hms`` / ``format_hms_fr
 Requirements
 ------------
 
-Python 3.9+. The library is on PyPI as `drik-panchanga`:
+Python 3.9+. The library is distributed as `ghadi`:
 
 ```
-pip install drik-panchanga          # core astronomy module
-pip install "drik-panchanga[pdf]"   # + PDF calendar generators (CLIs)
+pip install ghadi          # core astronomy module
+pip install "ghadi[pdf]"   # + PDF calendar generators (CLIs)
 ```
 
 Swiss Ephemeris needs `.se1` data files; set `SE_EPHE_PATH` or place them in
@@ -109,11 +109,11 @@ Calendar PDFs
 -------------
 
 Two layouts, usable either from a repository checkout
-(`python generate_*.py ...`) or after `pip install "drik-panchanga[pdf]"`:
+(`python generate_*.py ...`) or after `pip install "ghadi[pdf]"`:
 
 ```
-drik-panchanga-short --city Ujjain --start 2026-06    # one-page A4, 14 months
-drik-panchanga-long  --city Ujjain --start 2026-03    # 12-page wall calendar
+ghadi-short --city Ujjain --start 2026-06    # one-page A4, 14 months
+ghadi-long  --city Ujjain --start 2026-03    # 12-page wall calendar
 ```
 
 Both accept `--month amanta|purnimanta`, `--ayanamsa` (citra, revati, rohini,

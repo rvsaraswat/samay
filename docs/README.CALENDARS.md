@@ -3,10 +3,10 @@ Calendar PDFs — details
 
 Two PDF layouts share the same computation, colours, and markers:
 
-* **One-page** (`generate_panchanga_calendar.py` / `drik-panchanga-short`):
+* **One-page** (`generate_panchanga_calendar.py` / `ghadi-short`):
   14 consecutive months on a single A4 landscape sheet.
 * **Monthly wall calendar** (`generate_monthly_calendar.py` /
-  `drik-panchanga-long`): one A4 portrait grid page per month, 12 pages,
+  `ghadi-long`): one A4 portrait grid page per month, 12 pages,
   with wider rows suited for reading a full month at a glance.
 
 The monthly calendar shares the computation and festival/eclipse markers with

@@ -41,7 +41,7 @@ PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
                  "version 3 (or later).")
-PDF_SOURCE_URL = "https://github.com/bdsatish/drik-panchanga"
+PDF_SOURCE_URL = "https://github.com/rvsaraswat/samay"
 
 # ReportLab font names after ensure_pdf_fonts() registers IndUni-H.
 PDF_FONT = "Panchanga"
@@ -1149,8 +1149,8 @@ def argument_parser():
 def _check_reportlab():
   if canvas is None:
     raise ImportError(
-      "drik-panchanga[pdf] is required for PDF generation. "
-      "Install it with: pip install drik-panchanga[pdf]", )
+      "ghadi[pdf] is required for PDF generation. "
+      "Install it with: pip install 'ghadi[pdf]'", )
 
 
 def main(argv=None):

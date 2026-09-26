@@ -3,9 +3,9 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "drik-panchanga"
+name = "ghadi"
 version = "1.0.0"
-description = "Observational Indian lunisolar calendar (Drik Panchanga) using Swiss Ephemeris"
+description = "Ghadi, an observational Indian lunisolar calendar using Swiss Ephemeris"
 readme = "docs/README.pypi.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.9"
@@ -41,13 +41,13 @@ pdf = ["reportlab"]
 all = ["reportlab"]
 
 [project.scripts]
-drik-panchanga-short = "generate_panchanga_calendar:main"
-drik-panchanga-long = "generate_monthly_calendar:main"
+ghadi-short = "generate_panchanga_calendar:main"
+ghadi-long = "generate_monthly_calendar:main"
 
 [project.urls]
-Homepage = "https://github.com/bdsatish/drik-panchanga"
-Repository = "https://github.com/bdsatish/drik-panchanga"
-Issues = "https://github.com/bdsatish/drik-panchanga/issues"
+Homepage = "https://github.com/rvsaraswat/samay"
+Repository = "https://github.com/rvsaraswat/samay"
+Issues = "https://github.com/rvsaraswat/samay/issues"
 
 # Data, fonts, and config are shipped alongside the Python modules via [tool.setuptools.package-data].
 [tool.setuptools]

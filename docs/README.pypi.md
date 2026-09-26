@@ -1,23 +1,24 @@
-# drik-panchanga
+# Ghadi
 
-Observational Indian lunisolar calendar (Hindu Drig-ganita / Drik Panchanga)
-using the [Swiss Ephemeris](https://www.astro.com/swisseph/).
+Observational Indian lunisolar calendar (Hindu Drig-ganita Panchanga) using the
+[Swiss Ephemeris](https://www.astro.com/swisseph/). Ghadi is the product name
+for this Drik Panchanga engine.
 
 This PyPI package installs the core library module `panchanga.py`, plus the
 PDF calendar generators behind the `[pdf]` extra:
 
 ```bash
-pip install drik-panchanga          # core library only
-pip install "drik-panchanga[pdf]"   # + reportlab, PDF console scripts
+pip install ghadi          # core library only
+pip install "ghadi[pdf]"   # + reportlab, PDF console scripts
 ```
 
 With the `[pdf]` extra, two console commands are available:
 
-- `drik-panchanga-short` — one-page A4 landscape panchanga for 14 months
-- `drik-panchanga-long` — 12-page A4 portrait wall calendar
+- `ghadi-short` — one-page A4 landscape panchanga for 14 months
+- `ghadi-long` — 12-page A4 portrait wall calendar
 
 ```bash
-drik-panchanga-short --city "Bengaluru, IN" --start 2026-06
+ghadi-short --city "Bengaluru, IN" --start 2026-06
 ```
 
 ## Ephemeris data
@@ -61,7 +62,7 @@ panchanga.set_coordinate_mode("sidereal")
 ```
 
 Full source, GUI, festival rules, and PDF calendar live in the
-[GitHub repository](https://github.com/bdsatish/drik-panchanga).
+[GitHub repository](https://github.com/rvsaraswat/samay).
 
 ## License
 

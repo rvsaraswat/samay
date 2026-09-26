@@ -1,6 +1,6 @@
 
-    drik-panchanga is a Python program to compute dates according to the Indian
-    luni-solar calendar.
+    Ghadi is a Python program to compute dates according to the Indian
+    luni-solar calendar, based on the Drik Panchanga engine.
     Copyright (C) 2010-2026  Satish BD
 
     This program is free software: you can redistribute it and/or modify

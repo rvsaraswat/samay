@@ -113,8 +113,8 @@ ensure_ephemeris "$SE_EPHE_PATH"
 
 configure_se_ephe_path() {
   local activate="$VENV_DIR/bin/activate"
-  local begin="# >>> drik-panchanga SE_EPHE_PATH >>>"
-  local end="# <<< drik-panchanga SE_EPHE_PATH <<<"
+  local begin="# >>> ghadi SE_EPHE_PATH >>>"
+  local end="# <<< ghadi SE_EPHE_PATH <<<"
   local quoted_path
   quoted_path="$(printf '%q' "$SE_EPHE_PATH")"
 

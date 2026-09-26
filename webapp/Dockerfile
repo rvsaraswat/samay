@@ -1,6 +1,6 @@
 # Railway / container image for the panchanga PDF web UI.
 # Build from the repository root:
-#   docker build -f webapp/Dockerfile -t panchanga .
+#   docker build -f webapp/Dockerfile -t ghadi .
 FROM python:3.12-slim-bookworm
 
 RUN apt-get update \

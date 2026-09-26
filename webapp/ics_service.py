@@ -81,7 +81,7 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
     out = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//Drik Panchanga//EN",
+      "PRODID:-//Ghadi//EN",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
       "X-WR-CALNAME:" + cal_name,
