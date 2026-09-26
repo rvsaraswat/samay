@@ -175,7 +175,7 @@ class IcsServiceTests(unittest.TestCase):
     self.assertIn("VERSION:2.0", ics)
     self.assertIn("CALSCALE:GREGORIAN", ics)
     self.assertIn("METHOD:PUBLISH", ics)
-    self.assertIn("PRODID:-//Drik Panchanga//EN", ics)
+    self.assertIn("PRODID:-//Ghadi//EN", ics)
     self.assertIn("X-WR-CALNAME:Panchanga", ics)
     self.assertIn("BEGIN:VEVENT", ics)
     self.assertIn("DTSTART;VALUE=DATE:", ics)

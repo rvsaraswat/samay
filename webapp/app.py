@@ -35,6 +35,7 @@ from generate_panchanga_calendar import (
   require_start_month,
   resolve_location,
 )
+from festival_rules import FESTIVAL_RULES
 from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga
 from webapp.pdf_service import generate_pdf
@@ -44,6 +45,9 @@ from webapp.cosmic_api import (
   cosmic_date,
   cosmic_festivals,
   cosmic_timeline,
+  cosmic_birth,
+  cosmic_events,
+  cosmic_knowledge,
 )
 
 configure_logging()
@@ -122,6 +126,39 @@ def index():
 @app.get("/time-machine")
 def cosmic_dashboard():
   return render_template("cosmic.html", mode=request.path.strip("/") or "today")
+
+
+@app.get("/festivals")
+@app.get("/events")
+@app.get("/knowledge")
+@app.get("/birth-snapshot")
+@app.get("/muhurtas")
+@app.get("/settings")
+def portal_page():
+  return render_template("portal.html", mode=request.path.strip("/"))
+
+
+@app.get("/knowledge/<slug>")
+def knowledge_topic_page(slug):
+  return render_template("portal.html", mode=f"knowledge/{slug}")
+
+
+@app.get("/api/search")
+def api_search():
+  query = (request.args.get("q") or "").strip().casefold()
+  if not query:
+    return jsonify({"results": []})
+  results = []
+  for name in city_names():
+    if query in name.casefold():
+      results.append({"type": "location", "name": name, "url": "/cosmos"})
+  for rule in FESTIVAL_RULES:
+    if query in rule.name.casefold():
+      results.append({"type": "festival", "name": rule.name, "url": "/festivals"})
+  for topic in cosmic_knowledge()["topics"]:
+    if query in topic["slug"].casefold() or query in topic["title"].casefold():
+      results.append({"type": "knowledge", "name": topic["title"], "url": f"/knowledge/{topic['slug']}"})
+  return jsonify({"query": query, "results": results[:50]})
 
 
 @app.get("/api/cities")
@@ -246,6 +283,35 @@ def api_cosmic_month(month):
     return jsonify(cosmic_festivals(request.args, month=month))
   except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
     abort(400, description=str(error))
+
+
+@app.get("/api/cosmic/birth")
+def api_cosmic_birth():
+  try:
+    return jsonify(cosmic_birth(request.args))
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/cosmic/events")
+def api_cosmic_events():
+  try:
+    return jsonify(cosmic_events(request.args))
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/knowledge")
+def api_knowledge():
+  return jsonify(cosmic_knowledge())
+
+
+@app.get("/api/knowledge/<slug>")
+def api_knowledge_topic(slug):
+  try:
+    return jsonify(cosmic_knowledge(slug))
+  except KeyError:
+    abort(404, description=f"Unknown knowledge topic {slug!r}")
 
 
 @app.post("/generate")

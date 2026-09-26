@@ -13,5 +13,10 @@ All responses are JSON. Named cities use the authoritative `data/cities.json` ca
 | GET | `/api/cosmic/festival/{festival}` | Filtered festival records |
 | GET | `/api/cosmic/year/{year}` | Resolved festival records for all months |
 | GET | `/api/cosmic/month/{month}` | Resolved festival records for a month; pass `year` |
+| GET | `/api/cosmic/birth` | Birth-time cosmic snapshot; pass `datetime=YYYY-MM-DDTHH:MM` |
+| GET | `/api/cosmic/events` | Normalized Panchanga transitions and festival events for a date |
+| GET | `/api/knowledge` | Educational topic index |
+| GET | `/api/knowledge/<slug>` | Educational topic detail |
+| GET | `/api/search?q=...` | Search locations, festivals, and knowledge topics |
 
 Every date response includes an `engine` section identifying `panchanga.py`, coordinate mode, and ayanamsha. Numeric values are engine outputs, not frontend estimates.

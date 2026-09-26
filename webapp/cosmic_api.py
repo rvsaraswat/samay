@@ -163,3 +163,59 @@ def cosmic_festivals(args, year=None, month=None, festival_name=None):
     needle = festival_name.casefold()
     festivals = [item for item in festivals if needle in item["name"].casefold()]
   return {"year": year, "month": month, "location": location.name, "festivals": festivals}
+
+
+KNOWLEDGE = {
+  "panchanga": {"title": "Panchanga", "summary": "The five-part Indian lunisolar almanac.",
+                "body": "Panchanga brings together Tithi, Vara, Nakshatra, Yoga, and Karana. Ghadi anchors these values to the local sunrise and exposes the exact engine output behind each one."},
+  "tithi": {"title": "Tithi", "summary": "A lunar day measured by the Sun-Moon angle.",
+            "body": "One Tithi spans 12 degrees of lunar elongation. The Drik engine determines the Tithi at local sunrise and interpolates its ending instant."},
+  "nakshatra": {"title": "Nakshatra", "summary": "The Moon's passage through 27 stellar sectors.",
+                 "body": "Each Nakshatra covers a segment of the sidereal ecliptic and is divided into four Padas. Ghadi uses the configured Nakshatra system from the engine."},
+  "yoga": {"title": "Yoga", "summary": "A division based on the combined sidereal longitudes.",
+           "body": "The Sun and Moon longitudes are added and divided into 27 equal Yogas. The resulting sunrise Yoga and ending time come directly from panchanga.py."},
+  "karana": {"title": "Karana", "summary": "Half of a Tithi.",
+              "body": "A Karana spans six degrees of lunar elongation. Four fixed and seven repeating Karanas organize the lunar day."},
+  "ayanamsha": {"title": "Ayanamsha", "summary": "The sidereal reference offset.",
+                "body": "Ayanamsha defines the relationship between tropical and sidereal longitude. Ghadi exposes the selected Swiss Ephemeris mode in every cosmic response."},
+  "muhurta": {"title": "Muhurta", "summary": "A time window selected for a purpose.",
+              "body": "Ghadi's sunrise-anchored day record already contains Rahu Kalam, Durmuhurta, Varjyam, and Pratah Sandhya. Future Muhurta rules should consume those same intervals."},
+}
+
+
+def cosmic_birth(args):
+  value = (args.get("datetime") or args.get("birth") or "").strip()
+  if not value:
+    raise ValueError("datetime is required (YYYY-MM-DDTHH:MM)")
+  try:
+    birth = datetime.fromisoformat(value.replace("Z", "+00:00"))
+  except ValueError:
+    raise ValueError("datetime must be YYYY-MM-DDTHH:MM") from None
+  location = _location(args)
+  civil = panchanga.Date(birth.year, birth.month, birth.day)
+  result = cosmic_date(args, civil)
+  _month_system, coordinate_selection = _options(args)
+  result["planets"] = _planet_rows(location, civil, coordinate_selection,
+                                    birth.hour + birth.minute / 60 + birth.second / 3600)
+  result["birth"] = {"datetime": birth.isoformat(), "label": args.get("label") or "Birth Cosmic Snapshot"}
+  return result
+
+
+def cosmic_events(args):
+  snapshot = cosmic_date(args)
+  events = [{"type": item["type"], "name": item["name"], "ends": item["ends"],
+             "date": snapshot["date"], "source": item["source"]}
+            for item in snapshot["transitions"]]
+  festivals = cosmic_festivals(args)
+  events.extend({"type": "festival", "name": item["name"], "date": item["date"],
+                 "source": "festival_rules.py"} for item in festivals["festivals"])
+  return {"date": snapshot["date"], "location": snapshot["location"], "events": events}
+
+
+def cosmic_knowledge(slug=None):
+  if slug:
+    item = KNOWLEDGE.get(slug.casefold())
+    if item is None:
+      raise KeyError(slug)
+    return {"slug": slug.casefold(), **item}
+  return {"topics": [{"slug": key, **value} for key, value in KNOWLEDGE.items()]}
