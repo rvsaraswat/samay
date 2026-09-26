@@ -39,6 +39,12 @@ from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga
 from webapp.pdf_service import generate_pdf
 from webapp.ics_service import generate_ics
+from webapp.cosmic_api import (
+  cosmic_current,
+  cosmic_date,
+  cosmic_festivals,
+  cosmic_timeline,
+)
 
 configure_logging()
 app = Flask(__name__)
@@ -111,6 +117,13 @@ def index():
   return render_template("index.html")
 
 
+@app.get("/today")
+@app.get("/cosmos")
+@app.get("/time-machine")
+def cosmic_dashboard():
+  return render_template("cosmic.html", mode=request.path.strip("/") or "today")
+
+
 @app.get("/api/cities")
 def api_cities():
   query = request.args.get("q", "")
@@ -149,6 +162,89 @@ def api_panchanga():
       compute_day_panchanga(city, date, month_system=month, coordinate_selection=coordinate_selection,
                             latitude=latitude, longitude=longitude, timezone=timezone))
   except ValueError as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/cosmic/current")
+def api_cosmic_current():
+  try:
+    return jsonify(cosmic_current(request.args))
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/cosmic/date")
+def api_cosmic_date():
+  try:
+    return jsonify(cosmic_date(request.args))
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/cosmic/timeline")
+def api_cosmic_timeline():
+  try:
+    return jsonify(cosmic_timeline(request.args))
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/cosmic/transitions")
+def api_cosmic_transitions():
+  try:
+    result = cosmic_date(request.args)
+    return jsonify({"date": result["date"], "location": result["location"],
+                    "transitions": result["transitions"]})
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/cosmic/planet/<planet>")
+def api_cosmic_planet(planet):
+  try:
+    result = cosmic_date(request.args)
+    aliases = {"sun": "surya", "moon": "candra", "mars": "mangala", "mercury": "budha",
+               "jupiter": "guru", "venus": "sukra", "saturn": "sani"}
+    wanted = aliases.get(planet.casefold(), planet.casefold())
+    match = next((item for item in result["planets"] if item["planet"].casefold() == wanted), None)
+    if match is None:
+      abort(404, description=f"Unknown planet {planet!r}")
+    return jsonify({"date": result["date"], "location": result["location"], "planet": match})
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/cosmic/festivals")
+def api_cosmic_festivals():
+  try:
+    return jsonify(cosmic_festivals(request.args))
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/cosmic/festival/<festival>")
+def api_cosmic_festival(festival):
+  try:
+    return jsonify(cosmic_festivals(request.args, festival_name=festival))
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/cosmic/year/<int:year>")
+def api_cosmic_year(year):
+  try:
+    items = [cosmic_festivals(request.args, year=year, month=month) for month in range(1, 13)]
+    return jsonify({"year": year, "location": items[0]["location"],
+                    "festivals": [festival for item in items for festival in item["festivals"]]})
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/cosmic/month/<int:month>")
+def api_cosmic_month(month):
+  try:
+    return jsonify(cosmic_festivals(request.args, month=month))
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
     abort(400, description=str(error))
 
 
