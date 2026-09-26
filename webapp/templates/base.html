@@ -27,18 +27,22 @@
           <a class="nav-link" data-route="sky" href="/cosmos"><span class="nav-icon">✦</span><span data-i18n="nav.sky">Cosmic sky</span></a>
           <a class="nav-link" data-route="festivals" href="/festivals"><span class="nav-icon">✺</span><span data-i18n="nav.festivals">Festivals</span></a>
           <a class="nav-link" data-route="muhurtas" href="/muhurtas"><span class="nav-icon">◷</span><span data-i18n="nav.muhurtas">Muhurtas</span></a>
-        </nav>
-        <div class="nav-section-label nav-section-spaced" data-i18n="nav.learn">Learn</div>
-        <nav class="nav-list">
-          <a class="nav-link" data-route="knowledge" href="/knowledge"><span class="nav-icon">∴</span><span data-i18n="nav.notes">Field notes</span></a>
           <a class="nav-link" data-route="birth" href="/birth-snapshot"><span class="nav-icon">⊙</span><span data-i18n="nav.birth">Birth sky</span></a>
+          <a class="nav-link" data-route="knowledge" href="/knowledge"><span class="nav-icon">∴</span><span data-i18n="nav.notes">Field notes</span></a>
+          <a class="nav-section-label nav-section-spaced" data-i18n="nav.learn">Learn</a>
         </nav>
         <div class="sidebar-footer"><a class="nav-link" data-route="settings" href="/settings"><span class="nav-icon">⚙</span><span data-i18n="nav.settings">Settings</span></a><p data-i18n="shell.tagline">Ancient time, clearly observed.</p></div>
       </aside>
       <main class="main-content">{% block content %}{% endblock %}</main>
     </div>
     <nav class="mobile-nav" data-i18n-aria-label="shell.mobileNavigation">
-      <a data-route="today" href="/today"><span>⌂</span><span data-i18n="nav.today">Today</span></a><a data-route="calendar" href="/"><span>▦</span><span data-i18n="nav.calendar">Calendar</span></a><a data-route="sky" href="/cosmos"><span>✦</span><span data-i18n="nav.sky">Sky</span></a><a data-route="festivals" href="/festivals"><span>✺</span><span data-i18n="nav.festivals">Festivals</span></a><a data-route="knowledge" href="/knowledge"><span>∴</span><span data-i18n="nav.learn">Learn</span></a>
+      <a data-route="today" href="/today"><span>⌂</span><span data-i18n="nav.today">Today</span></a>
+      <a data-route="calendar" href="/"><span>▦</span><span data-i18n="nav.calendar">Calendar</span></a>
+      <a data-route="sky" href="/cosmos"><span>✦</span><span data-i18n="nav.sky">Sky</span></a>
+      <a data-route="festivals" href="/festivals"><span>✺</span><span data-i18n="nav.festivals">Festivals</span></a>
+      <a data-route="muhurtas" href="/muhurtas"><span>◷</span><span data-i18n="nav.muhurtas">Muhurtas</span></a>
+      <a data-route="birth" href="/birth-snapshot"><span>⊙</span><span data-i18n="nav.birth">Birth sky</span></a>
+      <a data-route="knowledge" href="/knowledge"><span>∴</span><span data-i18n="nav.learn">Learn</span></a>
     </nav>
   </div>
   <dialog id="location-dialog" class="location-dialog" aria-labelledby="location-dialog-title">
