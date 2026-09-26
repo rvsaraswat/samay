@@ -1,6 +1,7 @@
 """Cosmic API adapters built on the authoritative root Panchanga engine."""
 
 import calendar
+import re
 from datetime import datetime, timedelta, timezone
 
 import panchanga
@@ -157,12 +158,59 @@ def cosmic_festivals(args, year=None, month=None, festival_name=None):
   _markers, entries = resolve_festivals(records, dates,
                                         geopos=(location.longitude, location.latitude, 0),
                                         timezone_name=location.timezone_name)
-  festivals = [{"name": name, "date": date_text, "marker": marker}
-               for marker, date_text, name in entries if date_text]
+  festivals = [{"name": name, "date": date_text, "year": year, "month": month,
+                "marker": marker, "category": _festival_category(name)}
+               for marker, date_text, name in entries
+               if date_text and date_text != "None"]
   if festival_name:
     needle = festival_name.casefold()
     festivals = [item for item in festivals if needle in item["name"].casefold()]
   return {"year": year, "month": month, "location": location.name, "festivals": festivals}
+
+
+def _festival_category(name):
+  lowered = name.casefold()
+  if "sankranti" in lowered or "ayana" in lowered:
+    return "sankranti"
+  if any(term in lowered for term in ("independence", "republic", "gandhi", "christmas", "new year")):
+    return "national"
+  return "regional"
+
+
+def cosmic_calendar_month(args, year=None, month=None):
+  """Return one canonical calendar model for a Gregorian month."""
+  location = _location(args)
+  now = datetime.now(timezone.utc)
+  year = int(year or args.get("year") or now.year)
+  month = int(month or args.get("month_number") or now.month)
+  records = daily_records([(year, month)], location)
+  festival_data = cosmic_festivals(args, year=year, month=month)
+  events_by_day = {}
+  for item in festival_data["festivals"]:
+    numbers = re.findall(r"\d+", str(item.get("date") or ""))
+    if not numbers:
+      continue
+    day = int(numbers[-1])
+    name = item["name"]
+    events_by_day.setdefault(day, []).append({"name": name, "category": item.get("category", "regional"), "marker": item.get("marker")})
+  days = []
+  for record in records:
+    tithi_number = int(record.tithi[1:]) + (15 if record.tithi.startswith("K") else 0)
+    tithi_event = {"name": record.tithi, "category": "tithi"}
+    if tithi_number == 11 or tithi_number == 26:
+      tithi_event["category"] = "ekadashi"
+    elif tithi_number == 15:
+      tithi_event["category"] = "purnima"
+    elif tithi_number == 30:
+      tithi_event["category"] = "amavasya"
+    days.append({
+      "date": f"{year:04d}-{month:02d}-{record.civil_date.day:02d}",
+      "day": record.civil_date.day,
+      "tithi": record.tithi,
+      "tithi_event": tithi_event,
+      "events": [tithi_event, *events_by_day.get(record.civil_date.day, [])],
+    })
+  return {"year": year, "month": month, "location": location.name, "days": days}
 
 
 KNOWLEDGE = {

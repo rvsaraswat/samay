@@ -1,4 +1,4 @@
 {% extends "base.html" %}
 {% block title %}Ghadi | Explore{% endblock %}
-{% block content %}<div id="app"><div class="loading">Opening the observatory…</div></div>{% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='portal.js') }}"></script>{% endblock %}
+{% block content %}<div id="app"><div class="loading" data-i18n="shell.loading">Opening the observatory…</div></div>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='portal.js') }}"></script><script src="{{ url_for('static', filename='birth_sky.js') }}"></script>{% endblock %}

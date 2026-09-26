@@ -44,6 +44,7 @@ from webapp.cosmic_api import (
   cosmic_current,
   cosmic_date,
   cosmic_festivals,
+  cosmic_calendar_month,
   cosmic_timeline,
   cosmic_birth,
   cosmic_events,
@@ -281,6 +282,14 @@ def api_cosmic_year(year):
 def api_cosmic_month(month):
   try:
     return jsonify(cosmic_festivals(request.args, month=month))
+  except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
+    abort(400, description=str(error))
+
+
+@app.get("/api/calendar/month/<int:month>")
+def api_calendar_month(month):
+  try:
+    return jsonify(cosmic_calendar_month(request.args, month=month))
   except (KeyError, TypeError, ValueError, OSError, RuntimeError) as error:
     abort(400, description=str(error))
 

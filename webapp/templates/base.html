@@ -3,23 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101b35">
+  <meta name="theme-color" content="#07111f">
   <title>{% block title %}Ghadi | Cosmic Panchanga{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body data-mode="{{ mode|default('today') }}">
   <div class="app-shell">
     <header class="topbar">
-      <a class="brand" href="/today" aria-label="Ghadi home"><span class="brand-mark" aria-hidden="true">◒</span><span>GHADI</span></a>
-      <button class="topbar-context location-trigger" type="button" data-location-open aria-label="Choose location"><span class="context-label" data-i18n="shell.observatory">Observatory</span><strong id="global-location">New Delhi, IN</strong></button>
+      <a class="brand" href="/today" data-i18n-aria-label="shell.home"><span class="brand-mark" aria-hidden="true">◒</span><span>GHADI</span></a>
+      <button class="topbar-context location-trigger" type="button" data-location-open data-i18n-aria-label="shell.selectLocation"><span class="context-label" data-i18n="shell.observatory">Observatory</span><strong id="global-location">New Delhi, IN</strong></button>
       <div class="topbar-actions">
-        <button class="icon-button" type="button" data-theme-toggle aria-label="Toggle theme" title="Toggle theme">◐</button>
-        <label class="language-control"><span class="sr-only" data-i18n="shell.language">Language</span><select id="language-select" aria-label="Language"><option value="en">EN</option><option value="hi">हिन्दी</option></select></label>
-        <a class="avatar" href="/settings" aria-label="Open settings">S</a>
+        <button class="icon-button" type="button" data-theme-toggle data-i18n-aria-label="shell.toggleTheme" data-i18n-title="shell.toggleTheme">◐</button>
+        <label class="language-control"><span class="sr-only" data-i18n="shell.language">Language</span><select id="language-select" data-i18n-aria-label="shell.language"><option value="en">EN</option><option value="hi">हिन्दी</option></select></label>
+        <a class="avatar" href="/settings" data-i18n-aria-label="shell.settings">S</a>
       </div>
     </header>
     <div class="app-body">
-      <aside class="sidebar" aria-label="Primary navigation">
+      <aside class="sidebar" data-i18n-aria-label="shell.primaryNavigation">
         <div class="nav-section-label" data-i18n="nav.explore">Explore</div>
         <nav class="nav-list">
           <a class="nav-link" data-route="today" href="/today"><span class="nav-icon">⌂</span><span data-i18n="nav.today">Today</span></a>
@@ -37,14 +37,14 @@
       </aside>
       <main class="main-content">{% block content %}{% endblock %}</main>
     </div>
-    <nav class="mobile-nav" aria-label="Mobile navigation">
+    <nav class="mobile-nav" data-i18n-aria-label="shell.mobileNavigation">
       <a data-route="today" href="/today"><span>⌂</span><span data-i18n="nav.today">Today</span></a><a data-route="calendar" href="/"><span>▦</span><span data-i18n="nav.calendar">Calendar</span></a><a data-route="sky" href="/cosmos"><span>✦</span><span data-i18n="nav.sky">Sky</span></a><a data-route="festivals" href="/festivals"><span>✺</span><span data-i18n="nav.festivals">Festivals</span></a><a data-route="knowledge" href="/knowledge"><span>∴</span><span data-i18n="nav.learn">Learn</span></a>
     </nav>
   </div>
   <dialog id="location-dialog" class="location-dialog" aria-labelledby="location-dialog-title">
     <form method="dialog" class="location-dialog-form">
-      <div class="panel-heading"><div><div class="panel-kicker" data-i18n="shell.location">Location</div><h2 id="location-dialog-title" data-i18n="shell.selectLocation">Choose location</h2><p class="muted" data-i18n="shell.locationHint">Local timings and planetary positions use this place.</p></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div>
-      <label for="global-city" data-i18n="shell.searchCity">Search city</label><input id="global-city" autocomplete="off" placeholder="e.g. New Delhi, IN"><ul id="global-city-suggestions" class="city-suggestions" role="listbox"></ul>
+      <div class="panel-heading"><div><div class="panel-kicker" data-i18n="shell.location">Location</div><h2 id="location-dialog-title" data-i18n="shell.selectLocation">Choose location</h2><p class="muted" data-i18n="shell.locationHint">Local timings and planetary positions use this place.</p></div><button class="icon-button" value="cancel" data-i18n-aria-label="shell.close">×</button></div>
+      <label for="global-city" data-i18n="shell.searchCity">Search city</label><input id="global-city" autocomplete="off" data-i18n-placeholder="shell.cityPlaceholder"><ul id="global-city-suggestions" class="city-suggestions" role="listbox"></ul>
       <div class="dialog-actions"><button class="secondary" value="cancel" data-i18n="shell.cancel">Cancel</button><button id="global-city-save" value="default" data-i18n="shell.useLocation">Use location</button></div>
     </form>
   </dialog>

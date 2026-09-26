@@ -3,7 +3,7 @@
   const route = mode === 'knowledge' || mode.startsWith('knowledge/') ? 'knowledge' : mode === 'birth-snapshot' ? 'birth' : mode === 'muhurtas' ? 'muhurtas' : mode === 'festivals' ? 'festivals' : mode === 'settings' ? 'settings' : mode === 'cosmos' || mode === 'time-machine' ? 'sky' : mode === '' ? 'calendar' : mode;
   document.querySelectorAll(`[data-route="${route}"]`).forEach((link) => link.classList.add('active'));
   const savedTheme = localStorage.getItem('ghadi-theme');
-  if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+  document.documentElement.dataset.theme = savedTheme || 'dark';
   const savedLocale = localStorage.getItem('ghadi-locale') || 'en';
   const savedCity = localStorage.getItem('ghadi-city') || 'New Delhi, IN';
   let translations = {};
@@ -13,6 +13,9 @@
     document.documentElement.lang = window.Ghadi.locale;
     document.querySelectorAll('[data-i18n]').forEach((node) => { const value = window.Ghadi.t(node.dataset.i18n); if (value) node.textContent = value; });
     document.querySelectorAll('[data-i18n-title]').forEach((node) => { node.title = window.Ghadi.t(node.dataset.i18nTitle); });
+    document.querySelectorAll('[data-i18n-aria-label]').forEach((node) => { node.setAttribute('aria-label', window.Ghadi.t(node.dataset.i18nAriaLabel)); });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((node) => { node.setAttribute('placeholder', window.Ghadi.t(node.dataset.i18nPlaceholder)); });
+    document.querySelectorAll('#city').forEach((node) => { node.setAttribute('placeholder', window.Ghadi.t('shell.cityPlaceholder')); });
     const select = document.getElementById('language-select'); if (select) select.value = window.Ghadi.locale;
   };
   window.Ghadi = {
@@ -30,7 +33,7 @@
     query(params) { return new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== '')); },
     saveCity(city) { const value = String(city || '').trim(); if (!value) return; this.city = value; localStorage.setItem('ghadi-city', value); document.querySelectorAll('#global-location').forEach((target) => { target.textContent = value; }); document.dispatchEvent(new CustomEvent('ghadi-location-changed', { detail: { city: value } })); },
     async setLocale(locale) { const value = locale === 'hi' ? 'hi' : 'en'; const response = await fetch(`/static/locales/${value}.json`); translations = await response.json(); this.locale = value; localStorage.setItem('ghadi-locale', value); applyLocale(); document.dispatchEvent(new CustomEvent('ghadi-locale-changed', { detail: { locale: value } })); },
-    metric(label, value, detail = '', term = '') { const translatedLabel = this.label(label); const info = term ? `<button type="button" class="info-button" data-term="${this.esc(term)}" aria-label="${this.esc(this.t('common.about') || 'About')}">i</button>` : ''; return `<div class="metric"><span class="metric-label">${this.esc(translatedLabel)} ${info}</span><span class="metric-value">${this.esc(value || this.t('common.unavailable'))}</span>${detail ? `<small class="muted">${this.esc(detail)}</small>` : ''}</div>`; },
+    metric(label, value, detail = '', term = '') { const translatedLabel = this.label(label); const info = term ? `<button type="button" class="info-button" data-term="${this.esc(term)}" aria-label="${this.esc(this.t('common.about') || 'About')}"><span aria-hidden="true">i</span></button>` : ''; return `<div class="metric"><span class="metric-label">${this.esc(translatedLabel)} ${info}</span><span class="metric-value">${this.esc(value || this.t('common.unavailable'))}</span>${detail ? `<small class="muted">${this.esc(detail)}</small>` : ''}</div>`; },
     setStatus(message, error = false) { const status = document.getElementById('status'); if (status) { status.textContent = message; status.className = error ? 'status error' : 'status'; } },
     setLoading(target, message = this.t('common.loading')) { const node = typeof target === 'string' ? document.getElementById(target) : target; if (node) node.innerHTML = `<div class="loading" role="status">${this.esc(message)}</div>`; },
   };
@@ -41,11 +44,11 @@
   const renderSuggestions = async (input) => { const list = document.getElementById('global-city-suggestions'); if (!list || input.value.trim().length < 2) { if (list) list.innerHTML = ''; return; } try { const data = await window.Ghadi.get(`/api/cities?q=${encodeURIComponent(input.value.trim())}&limit=8`); list.innerHTML = data.cities.map((city) => `<li><button type="button" data-city-choice="${esc(city)}">${esc(city)}</button></li>`).join(''); } catch { list.innerHTML = ''; } };
   document.getElementById('global-city')?.addEventListener('input', (event) => renderSuggestions(event.target));
   document.getElementById('global-city-suggestions')?.addEventListener('click', (event) => { const button = event.target.closest('[data-city-choice]'); if (!button) return; document.getElementById('global-city').value = button.dataset.cityChoice; document.getElementById('global-city-save').click(); });
-  document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => { const next = document.documentElement.dataset.theme === 'dark' ? '' : 'dark'; document.documentElement.dataset.theme = next; localStorage.setItem('ghadi-theme', next); });
+  document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => { const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = next; localStorage.setItem('ghadi-theme', next); });
   document.getElementById('language-select')?.addEventListener('change', async (event) => { await window.Ghadi.setLocale(event.target.value); window.location.reload(); });
   document.addEventListener('change', (event) => { if (event.target.matches('input#city') && event.target.id !== 'global-city') window.Ghadi.saveCity(event.target.value); });
-  const termDefinitions = { Tithi: 'The lunar day, measured by the angular distance between the Sun and Moon.', Nakshatra: 'The Moon\'s sidereal sector, one of 27 divisions of the ecliptic.', Yoga: 'A Sun-Moon combination used as one of the five Panchanga limbs.', Karana: 'Half of a Tithi, used to describe the finer rhythm of a lunar day.', Muhurta: 'A traditional time window interpreted alongside local sunrise and sunset.' };
-  document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-term]'); if (!trigger) return; document.querySelector('.term-popover')?.remove(); const term = trigger.dataset.term; const popover = document.createElement('aside'); popover.className = 'term-popover'; popover.innerHTML = `<strong>${esc(term)}</strong><p>${esc(termDefinitions[term] || 'A calendrical and astronomical measure in the Panchanga.')}</p>`; document.body.append(popover); const box = trigger.getBoundingClientRect(); popover.style.left = `${Math.min(box.left, innerWidth - popover.offsetWidth - 15)}px`; popover.style.top = `${Math.min(box.bottom + 8, innerHeight - popover.offsetHeight - 15)}px`; });
+  const termDefinitions = { Tithi: 'term.tithi', Nakshatra: 'term.nakshatra', Yoga: 'term.yoga', Karana: 'term.karana', Muhurta: 'term.muhurta' };
+  document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-term]'); if (!trigger) return; document.querySelector('.term-popover')?.remove(); const term = trigger.dataset.term; const popover = document.createElement('aside'); popover.className = 'term-popover'; popover.innerHTML = `<strong>${esc(Ghadi.label(term))}</strong><p>${esc(Ghadi.t(termDefinitions[term] || 'term.generic'))}</p>`; document.body.append(popover); const box = trigger.getBoundingClientRect(); popover.style.left = `${Math.min(box.left, innerWidth - popover.offsetWidth - 15)}px`; popover.style.top = `${Math.min(box.bottom + 8, innerHeight - popover.offsetHeight - 15)}px`; });
   document.addEventListener('click', (event) => { if (!event.target.closest('[data-term]') && !event.target.closest('.term-popover')) document.querySelector('.term-popover')?.remove(); });
   window.Ghadi.ready = window.Ghadi.setLocale(savedLocale);
   const location = document.getElementById('global-location'); if (location) location.textContent = window.Ghadi.city;
