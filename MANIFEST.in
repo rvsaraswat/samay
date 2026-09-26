@@ -1,0 +1,15 @@
+include LICENSE
+include docs/README.pypi.md
+include datetime_helper.py
+include panchanga.py
+include festival_rules.py
+include generate_panchanga_calendar.py
+include generate_monthly_calendar.py
+include pyproject.toml
+recursive-include data *
+recursive-include fonts *
+recursive-include config *
+prune tests
+prune webapp
+prune experimental
+prune scripts

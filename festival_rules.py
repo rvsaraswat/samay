@@ -1,0 +1,855 @@
+"""Festival API consumed by the PDF calendar generator."""
+
+import calendar
+import configparser
+import logging
+from collections import namedtuple as struct
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import panchanga
+from datetime_helper import (gregorian_to_jd, jd_to_local_civil_date, julian_day_from_datetime, tzinfo_for,
+                             utc_offset_hours)
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
+
+
+def _event_jd_ut(civil_date, geopos, timezone_name, getter):
+  """UT JD of a local event, or None if missing / sentinel."""
+  place = _place_for_civil(civil_date, geopos, timezone_name)
+  jd = gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
+  try:
+    event = getter(jd, place)
+  except Exception:
+    return None
+  if event is None:
+    return None
+  local_jd = event[0]
+  if not jd - 1 <= local_jd <= jd + 2:
+    return None
+  return local_jd - place.timezone / 24
+
+
+def _sunset_jd_ut(civil_date, geopos, timezone_name):
+  """Sunset as UT JD, or None if the sun does not set (polar day/night)."""
+  return _event_jd_ut(civil_date, geopos, timezone_name, panchanga.sunset)
+
+
+def _moonrise_jd_ut(civil_date, geopos, timezone_name):
+  """Hindu-day moonrise as UT JD, or None if none in ``[sunrise, next sunrise)``."""
+  return _event_jd_ut(civil_date, geopos, timezone_name, panchanga.moonrise)
+
+
+DayRecord = struct('DayRecord', ['civil_date', 'tithi', 'nakshatra', 'yoga', 'masa', 'is_adhika', 'sunrise_jd'])
+
+# Pāraṇa window for one ekādaśī upavāsa (keyed by parana_date in batch helpers).
+EkadashiParana = struct('EkadashiParana', ['upavasa_date', 'parana_date', 'parana_jd', 'parana_end_jd', 'case'])
+
+# Deliberately simple operational pāraṇa window: four ghaṭikās = 96 minutes.
+PARANA_WINDOW_GHATIS = 4
+PARANA_WINDOW_JD = PARANA_WINDOW_GHATIS / 60.0
+
+FestivalRule = struct('FestivalRule', ['name', 'masa', 'tithi', 'selector', 'allow_adhika', 'location_aware'],
+                      defaults=(None, None, None, False, False))
+
+EKADASHI_TITHIS = ('S11', 'K11')
+
+HASTA_NAKSHATRA = 13
+SRAVANA_NAKSHATRA = 22
+
+
+def all_festival_names():
+  """Catalog festival names in fixed seasonal order."""
+  return tuple(rule.name for rule in FESTIVAL_RULES)
+
+
+def load_festival_selection(path, include_extra=False):
+  """Load enabled festival names from an INI configuration.
+
+  The ``[festivals]`` section is shared by both calendar formats.  The
+  optional ``[extra]`` section is considered only when ``include_extra`` is
+  true (the monthly calendar); annual-calendar callers therefore ignore it.
+  Extra names must not overlap with names in ``[festivals]``.
+  """
+  parser = configparser.ConfigParser(strict=True)
+  parser.optionxform = str  # preserve festival name case
+  parser.read_string(Path(path).read_text(encoding="utf-8"))
+  catalog = all_festival_names()
+  catalog_set = set(catalog)
+  base_items = list(parser.items("festivals"))
+  base_names = [name for name, _raw in base_items]
+  unknown = [name for name in base_names if name not in catalog_set]
+
+  extra_items = []
+  if include_extra and parser.has_section("extra"):
+    extra_items = list(parser.items("extra"))
+  extra_names = [name for name, _raw in extra_items]
+  unknown_extra = [name for name in extra_names if name not in catalog_set]
+  overlap = [name for name in extra_names if name in set(base_names)]
+
+  selected_items = base_items + extra_items
+  selected_names = [name for name, _raw in selected_items]
+  missing = []
+  # Keep the existing complete-catalog validation for configurations without
+  # an [extra] section. With [extra], validate the combined catalogue for the
+  # monthly caller; the annual caller intentionally does not inspect it.
+  if include_extra or not parser.has_section("extra"):
+    missing = [name for name in catalog if name not in set(selected_names)]
+
+  problems = []
+  if unknown:
+    problems.append("unknown: " + ", ".join(unknown))
+  if unknown_extra:
+    problems.append("unknown in [extra]: " + ", ".join(unknown_extra))
+  if overlap:
+    problems.append("overlap between [festivals] and [extra]: " + ", ".join(overlap))
+  if missing:
+    problems.append("missing: " + ", ".join(missing))
+  if problems:
+    raise ValueError(f"Bad festival selection in {path} ({'; '.join(problems)})")
+
+  return [name for name, raw in selected_items if raw.strip().casefold() in ("yes", "true", "1", "on")]
+
+
+def format_festival_dates(dates):
+  dates = sorted(dates)
+  if dates:
+    # Consecutive days in one month → "Mar 19-21"; otherwise list each date.
+    same_month = True
+    for value in dates:
+      if value.year != dates[0].year or value.month != dates[0].month:
+        same_month = False
+        break
+    consecutive = True
+    for index in range(1, len(dates)):
+      if dates[index] != dates[index - 1] + timedelta(days=1):
+        consecutive = False
+        break
+    if len(dates) == 1 or not same_month or not consecutive:
+      parts = []
+      for value in dates:
+        month_name = calendar.month_abbr[value.month]
+        day = f"{value.day:02d}"
+        parts.append(month_name + " " + day)
+      text = ",".join(parts)
+    else:
+      month_name = calendar.month_abbr[dates[0].month]
+      first_day = f"{dates[0].day:02d}"
+      last_day = f"{dates[-1].day:02d}"
+      text = month_name + " " + first_day + "-" + last_day
+  else:
+    text = "None"
+  return text
+
+
+def plain_tithi_number(tithi):
+  """Convert ``S1``..``S15`` or ``K1``..``K15`` to 1..30."""
+  number = int(tithi[1:])
+  plain = number if tithi.startswith("S") else number + 15
+  return plain
+
+
+def masa_codes_for(masa, allow_adhika=False):
+  """Accepted masa codes for a rule, or ``None`` to accept any masa."""
+  if masa is not None:
+    codes = {str(masa)}
+    if allow_adhika:
+      codes.add("A" + str(masa))
+  else:
+    codes = None
+  return codes
+
+
+def resolve_vriddhi_dates(dates):
+  """Keep the earlier day when a festival prevails at consecutive sunrises."""
+  resolved = []
+  previous = None
+  for civil_date in sorted(dates):
+    if previous is not None and civil_date == previous + timedelta(days=1):
+      previous = civil_date
+      continue
+    resolved.append(civil_date)
+    previous = civil_date
+  return resolved
+
+
+def select_kshaya_dates(records, tithi, masa=None, allow_adhika=False):
+  """Later civil day when the tithi is skipped between sunrises.
+
+    With ``masa``, check the later sunrise for Shukla and the earlier for Krishna.
+    """
+  target_tithi = plain_tithi_number(tithi)
+  masa_codes = masa_codes_for(masa, allow_adhika)
+  matches = []
+  ordered = sorted(records, key=lambda record: record.civil_date)
+  for record, following in zip(ordered, ordered[1:]):
+    civil_date, day_tithi, day_masa = record.civil_date, record.tithi, record.masa
+    next_date, next_tithi, next_masa = following.civil_date, following.tithi, following.masa
+    if next_date != civil_date + timedelta(days=1):
+      continue
+    start_tithi = plain_tithi_number(day_tithi)
+    end_tithi = plain_tithi_number(next_tithi)
+    skipped = []
+    gap = (end_tithi - start_tithi) % 30
+    for offset in range(1, gap):
+      skipped.append((start_tithi + offset - 1) % 30 + 1)
+    if target_tithi not in skipped:
+      continue
+    if masa_codes is not None:
+      if target_tithi <= 15:
+        check_masa = next_masa
+      else:
+        check_masa = day_masa
+      if check_masa not in masa_codes:
+        continue
+    matches.append(next_date)
+  return matches
+
+
+def select_tithi_dates(records, tithi, masa=None, allow_adhika=False):
+  """Civil days for a tithi using sunrise, vriddhi, and kshaya rules.
+
+    Vriddhi keeps the former date; kshaya keeps the later civil date.
+    """
+  masa_codes = masa_codes_for(masa, allow_adhika)
+  sunrise_dates = []
+  for record in records:
+    if record.tithi != tithi:
+      continue
+    if masa_codes is not None and record.masa not in masa_codes:
+      continue
+    sunrise_dates.append(record.civil_date)
+  sunrise_matches = resolve_vriddhi_dates(sunrise_dates)
+  kshaya_matches = select_kshaya_dates(records, tithi, masa=masa, allow_adhika=allow_adhika)
+  return sorted(set(sunrise_matches) | set(kshaya_matches))
+
+
+def select_plain_tithi_dates(records, masa, tithi, allow_adhika=False):
+  """Civil days for a plain masa+tithi festival (adhika-preferring when allowed)."""
+  matches = select_tithi_dates(records, tithi, masa=masa, allow_adhika=allow_adhika)
+  if not allow_adhika or not matches:
+    selected = matches
+  else:
+    records_by_date = {}
+    for record in records:
+      records_by_date[record.civil_date] = record
+    adhika_matches = []
+    for civil_date in matches:
+      record = records_by_date[civil_date]
+      if record.is_adhika or record.masa.startswith("A"):
+        adhika_matches.append(civil_date)
+    selected = adhika_matches if adhika_matches else matches
+  return selected
+
+
+def select_varamahalakshmi_dates(records):
+  """Friday strictly before non-adhika Sravana Purnima (S15)."""
+  selected = []
+  for purnima_date in select_plain_tithi_dates(records, 5, "S15"):
+    vrata_date = purnima_date - timedelta(days=1)
+    while vrata_date.weekday() != calendar.FRIDAY:
+      vrata_date -= timedelta(days=1)
+    selected.append(vrata_date)
+  return selected
+
+
+def find_local_eclipses(start_jd, end_jd, geopos):
+  """Locally visible partial/total/annular eclipses with maximum in ``[start_jd, end_jd)``."""
+  if end_jd <= start_jd:
+    return []
+
+  searches = (("Lunar", panchanga.swe.lun_eclipse_when_loc), ("Solar", panchanga.swe.sol_eclipse_when_loc))
+  found = []
+  for kind, finder in searches:
+    search_jd = start_jd - 1.0
+    while search_jd < end_jd + 2.0:
+      try:
+        flags, times, _ = finder(search_jd, geopos)
+      except Exception as error:
+        log.error("Eclipse search for %s failed at JD %s: %s", kind, search_jd, error)
+        break
+      maximum = times[0]
+      if not maximum or maximum <= search_jd:
+        break
+      # Partial/Total/Annular only when locally usable; skip penumbral/invisible.
+      phase = None
+      if flags & panchanga.swe.ECL_VISIBLE:
+        if flags & panchanga.swe.ECL_TOTAL:
+          phase = "Total"
+        elif flags & (panchanga.swe.ECL_ANNULAR | panchanga.swe.ECL_ANNULAR_TOTAL):
+          phase = "Annular"
+        elif flags & panchanga.swe.ECL_PARTIAL:
+          phase = "Partial"
+      if phase is not None and start_jd <= maximum < end_jd:
+        found.append((kind, phase, maximum))
+      # Advance by a full day. A tiny epsilon can make swe return the same
+      # eclipse again (e.g. a skipped penumbral), which would stall the loop.
+      search_jd = maximum + 1.0
+
+  found.sort(key=lambda item: item[2])
+  return found
+
+
+def hindu_day_has_eclipse(civil_date, geopos, timezone_name):
+  """True when a visible non-penumbral lunar eclipse peaks in the Hindu day.
+
+    The Hindu day runs ``[sunrise, next sunrise)``, not midnight to midnight:
+    an eclipse before that morning's sunrise belongs to the previous date, the
+    same date the printed eclipse mark sits on. If a sunrise is unavailable,
+    fall back to the civil window rather than silently dropping the eclipse.
+    """
+  if geopos is None:
+    return False
+  start_jd = _event_jd_ut(civil_date, geopos, timezone_name, panchanga.sunrise)
+  end_jd = _event_jd_ut(civil_date + timedelta(days=1), geopos, timezone_name, panchanga.sunrise)
+  if start_jd is None or end_jd is None:
+    log.warning("Sunrise unavailable for %s; eclipse test uses the civil day", civil_date)
+    day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=tzinfo_for(timezone_name))
+    start_jd = julian_day_from_datetime(day_start)
+    end_jd = julian_day_from_datetime(day_start + timedelta(days=1))
+  for kind, _phase, _maximum_jd in find_local_eclipses(start_jd, end_jd, geopos):
+    if kind == "Lunar":
+      return True
+  return False
+
+
+def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
+  """Postpone each primary date to its own year's fallback on a local eclipse.
+
+    Each primary date is paired with the fallback of its own Gregorian year,
+    so only the eclipsed year's date moves; every other year keeps its date.
+    The eclipse is tested against the Hindu day (``[sunrise, next sunrise)``)
+    that begins on the primary date, matching the printed eclipse mark.
+    """
+  if not primary:
+    return list(fallback)
+  if geopos is not None and timezone_name is None:
+    log.error("Upakarma eclipse check skipped: no timezone name")
+    return list(primary)
+  fallback_by_year = {civil_date.year: civil_date for civil_date in fallback}
+  selected = []
+  for civil_date in primary:
+    fallback_date = fallback_by_year.get(civil_date.year)
+    if fallback_date and hindu_day_has_eclipse(civil_date, geopos, timezone_name):
+      selected.append(fallback_date)
+    else:
+      selected.append(civil_date)
+  return selected
+
+
+def select_yajur_upakarma_dates(records, geopos=None, timezone_name=None):
+  """Nija Sravana Purnima (S15), postponed to Bhadrapada S15 on eclipse."""
+  primary = select_plain_tithi_dates(records, 5, "S15")
+  fallback = select_plain_tithi_dates(records, 6, "S15")
+  return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
+
+
+def _nija_nakshatra_dates(records, masa, nakshatra):
+  """First non-adhika civil date with ``nakshatra`` in each lunar ``masa`` month.
+
+    The nakshatra cycle is shorter than a long lunar month, so the same
+    nakshatra can reach sunrise twice in one masa (e.g. Bhadrapada Hasta on
+    2026-09-13 and 2026-10-10). Only the first day is the nija observance,
+    which also keeps the former sunrise when vriddhi repeats it next day.
+    """
+  dates = []
+  masa_code = str(masa)
+  month_has_date = False
+  for record in sorted(records, key=lambda record: record.civil_date):
+    if record.masa != masa_code:
+      month_has_date = False
+      continue
+    if record.is_adhika:
+      continue
+    if record.nakshatra != nakshatra:
+      continue
+    if month_has_date:
+      continue
+    month_has_date = True
+    dates.append(record.civil_date)
+  return dates
+
+
+def _sravana_nakshatra_in_raasi_dates(records, raasi):
+  """Sravana-nakshatra sunrises in solar ``raasi``, vriddhi-resolved."""
+  dates = []
+  for record in records:
+    if record.nakshatra != SRAVANA_NAKSHATRA:
+      continue
+    if panchanga.raasi(record.sunrise_jd) != raasi:
+      continue
+    dates.append(record.civil_date)
+  return resolve_vriddhi_dates(dates)
+
+
+def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
+  """Nija Sravana-nakshatra day, postponed to Bhadrapada on kshaya/eclipse."""
+  # For kshaya nakshatra / eclipse:
+  # TTD/Sri-Vaishnava rule: Sravana masa = 5. If unavailable or eclipsed,
+  # use Bhadrapada masa = 6 for Sravana Nakshatra.
+  # Madhwas use Sravana-S05 instead (e.g. SRS Mutt: 03-08-2022)
+  # Smartas use the former civil date when there is Kshaya nakshatra
+  # (e.g. Sringeri: 11-08-2022)
+  primary = _nija_nakshatra_dates(records, 5, SRAVANA_NAKSHATRA)
+  fallback = _nija_nakshatra_dates(records, 6, SRAVANA_NAKSHATRA)
+  return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
+
+
+def select_sama_upakarma_dates(records, geopos=None, timezone_name=None):
+  """Nija Bhadrapada Hasta, preponed to Sravana Hasta on kshaya / local lunar eclipse."""
+  primary = _nija_nakshatra_dates(records, 6, HASTA_NAKSHATRA)
+  fallback = _nija_nakshatra_dates(records, 5, HASTA_NAKSHATRA)
+  return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
+
+
+def select_onam_dates(records):
+  """Sravana-nakshatra sunrise in Simha; if none, try Kanya. Vriddhi keeps former.
+
+    Same sunrise/vriddhi/kshaya-fallback pattern as Rig Upakarma, but keyed on
+    solar rasi (Simha then Kanya) rather than lunar masa, with no eclipse test.
+    """
+  SIMHA_RAASI = 5
+  KANYA_RAASI = 6
+
+  primary = _sravana_nakshatra_in_raasi_dates(records, SIMHA_RAASI)
+  selected = primary if primary else _sravana_nakshatra_in_raasi_dates(records, KANYA_RAASI)
+  return selected
+
+
+def select_vaikuntha_ekadashi_dates(records):
+  """Margasira/Pausha Shukla Ekadashi upavasa while the Sun is in Dhanur."""
+  records_by_date = {}
+  for record in records:
+    records_by_date[record.civil_date] = record
+  selected = []
+  for civil_date in select_tithi_dates(records, "S11"):
+    record = records_by_date[civil_date]
+    if record.masa not in {"9", "10"}:
+      continue
+    if panchanga.raasi(record.sunrise_jd) == 9:
+      selected.append(civil_date)
+  return selected
+
+
+PRADOSHA_TITHIS = frozenset({13, 28})  # S13 and K13 in 1-30 numbering
+
+
+def _sunset_tithi_skipped(records, geopos, timezone_name):
+  """Detect Trayodashi kshaya between consecutive sunsets.
+
+  When Trayodashi is skipped between two sunsets, return the latter civil
+  day (analogous to ``select_kshaya_dates`` for sunrise).
+  """
+  ordered = sorted(records, key=lambda r: r.civil_date)
+  kshaya_dates = []
+  for record, following in zip(ordered, ordered[1:]):
+    if following.civil_date != record.civil_date + timedelta(days=1):
+      continue
+    sunset_jd = _sunset_jd_ut(record.civil_date, geopos, timezone_name)
+    next_sunset_jd = _sunset_jd_ut(following.civil_date, geopos, timezone_name)
+    if sunset_jd is None or next_sunset_jd is None:
+      continue
+    tithi_1 = int(panchanga.lunar_phase(sunset_jd) // 12) + 1
+    tithi_2 = int(panchanga.lunar_phase(next_sunset_jd) // 12) + 1
+    gap = (tithi_2 - tithi_1) % 30
+    skipped = [(tithi_1 + offset - 1) % 30 + 1 for offset in range(1, gap)]
+    if PRADOSHA_TITHIS & set(skipped):
+      kshaya_dates.append(following.civil_date)
+  return kshaya_dates
+
+
+def select_pradosham_dates(records, geopos=None, timezone_name=None):
+  """Trayodashi (S13/K13) prevailing at sunset.
+
+  Pradosham is observed when Trayodashi tithi prevails at sunset. This
+  occurs twice a month -- once in Shukla Paksha (S13) and once in Krishna
+  Paksha (K13).
+
+  Corner cases:
+  - Vriddhi (Trayodashi at sunset on consecutive days): keep only the
+    earlier civil date (same rule as ``resolve_vriddhi_dates``).
+  - Kshaya (Trayodashi skipped between two sunsets): pick the latter
+    civil day.
+  - Without location/timezone: falls back to sunrise-based selection.
+  """
+  if geopos is None or timezone_name is None:
+    s13 = select_tithi_dates(records, "S13")
+    k13 = select_tithi_dates(records, "K13")
+    return sorted(set(s13) | set(k13))
+
+  selected = []
+  for record in records:
+    sunset_jd = _sunset_jd_ut(record.civil_date, geopos, timezone_name)
+    if sunset_jd is None:
+      continue
+    tithi_at_sunset = int(panchanga.lunar_phase(sunset_jd) // 12) + 1
+    if tithi_at_sunset in PRADOSHA_TITHIS:
+      selected.append(record.civil_date)
+
+  # Vriddhi: keep only the earlier day when Trayodashi prevails at sunset
+  # on consecutive days.
+  selected = resolve_vriddhi_dates(selected)
+
+  # Kshaya: if Trayodashi is skipped between two sunsets, pick the latter day.
+  kshaya_dates = _sunset_tithi_skipped(records, geopos, timezone_name)
+  return sorted(set(selected) | set(kshaya_dates))
+
+
+def _moonrise_tithi_skipped(records, geopos, timezone_name, target_tithi):
+  """Detect a tithi skipped between consecutive Hindu-day moonrises.
+
+  When ``target_tithi`` is skipped between two moonrises (each in that day's
+  ``[sunrise, next sunrise)`` window), return the latter civil day.
+  """
+  ordered = sorted(records, key=lambda r: r.civil_date)
+  kshaya_dates = []
+  for record, following in zip(ordered, ordered[1:]):
+    if following.civil_date != record.civil_date + timedelta(days=1):
+      continue
+    moonrise_jd = _moonrise_jd_ut(record.civil_date, geopos, timezone_name)
+    next_moonrise_jd = _moonrise_jd_ut(following.civil_date, geopos, timezone_name)
+    if moonrise_jd is None or next_moonrise_jd is None:
+      continue
+    tithi_1 = int(panchanga.lunar_phase(moonrise_jd) // 12) + 1
+    tithi_2 = int(panchanga.lunar_phase(next_moonrise_jd) // 12) + 1
+    gap = (tithi_2 - tithi_1) % 30
+    skipped = [(tithi_1 + offset - 1) % 30 + 1 for offset in range(1, gap)]
+    if target_tithi in skipped:
+      kshaya_dates.append(following.civil_date)
+  return kshaya_dates
+
+
+SANKASHTI_TITHI = 19  # K4 in 1-30 numbering
+
+
+def select_sankashti_chaturthi_dates(records, geopos=None, timezone_name=None):
+  """Krishna Chaturthi (K4) prevailing at Hindu-day moonrise.
+
+  Sankashtahara Chaturthi is observed when K4 tithi prevails at the moonrise
+  in ``[sunrise, next sunrise)`` for that civil date (same Hindu-day window
+  as the calendar Moon line). Occurs once per lunar month in Krishna Paksha.
+
+  Corner cases:
+  - Vriddhi (K4 at moonrise on consecutive days): keep only the earlier
+    civil date.
+  - Kshaya (K4 skipped between two Hindu-day moonrises): pick the latter
+    civil day.
+  - Without location/timezone: falls back to sunrise-based selection.
+  """
+  if geopos is None or timezone_name is None:
+    return select_tithi_dates(records, "K4")
+
+  selected = []
+  for record in records:
+    moonrise_jd = _moonrise_jd_ut(record.civil_date, geopos, timezone_name)
+    if moonrise_jd is None:
+      continue
+    tithi_at_moonrise = int(panchanga.lunar_phase(moonrise_jd) // 12) + 1
+    if tithi_at_moonrise == SANKASHTI_TITHI:
+      selected.append(record.civil_date)
+
+  # Vriddhi: keep only the earlier day when K4 prevails at moonrise
+  # on consecutive days.
+  selected = resolve_vriddhi_dates(selected)
+
+  # Kshaya: if K4 is skipped between two moonrises, pick the latter day.
+  kshaya_dates = _moonrise_tithi_skipped(records, geopos, timezone_name, SANKASHTI_TITHI)
+  return sorted(set(selected) | set(kshaya_dates))
+
+
+def sankranti_raasi_by_date(records):
+  """Map civil date → rāśi (1–12) for each first sunrise into a new solar sign.
+
+    Uses the same rule as Mesha/Makara festival selectors: the civil day of the
+    first local sunrise at which the Sun is already in the new rāśi.
+    """
+  selected = {}
+  previous_raasi = None
+  for record in sorted(records, key=lambda record: record.civil_date):
+    raasi = int(panchanga.raasi(record.sunrise_jd))
+    if previous_raasi is not None and raasi != previous_raasi:
+      selected[record.civil_date] = raasi
+    previous_raasi = raasi
+  return selected
+
+
+def select_sankranti_dates(records, target_raasi):
+  """First civil sunrise after each transition into ``target_raasi``."""
+  target = int(target_raasi)
+  dates = []
+  for civil_date, raasi in sankranti_raasi_by_date(records).items():
+    if raasi == target:
+      dates.append(civil_date)
+  return dates
+
+
+def select_mesha_sankranti_dates(records):
+  """First civil sunrise after each transition into Mesha (raasi 1)."""
+  return select_sankranti_dates(records, 1)
+
+
+def select_makara_sankranti_dates(records):
+  """First civil sunrise after each transition into Makara (raasi 10)."""
+  return select_sankranti_dates(records, 10)
+
+
+def select_solstice_dates(records, solstice_longitude, timezone_name=None):
+  """First civil sunrise after each tropical solstice moment.
+
+    Swiss Ephemeris finds the tropical Sun longitude crossing at 90° (June
+    solstice) or 270° (December solstice). The search is limited to a narrow
+    local-date window around the event; sunrise JDs are UT, so comparing them
+    directly with the UT event moment preserves the local sunrise rule.
+    """
+  records_by_date = {}
+  for record in records:
+    records_by_date[record.civil_date] = record
+  years = []
+  for civil_date in records_by_date:
+    if civil_date.year not in years:
+      years.append(civil_date.year)
+  years.sort()
+  local_timezone = timezone_name or "UTC"
+  selected = []
+  for year in years:
+    start_jd = gregorian_to_jd(panchanga.Date(year, 1, 1))
+    flags = panchanga.swe.FLG_SWIEPH | panchanga.swe.FLG_TROPICAL
+    solstice_jd = panchanga.swe.solcross_ut(float(solstice_longitude), start_jd, flags)
+    solstice_date = jd_to_local_civil_date(solstice_jd, local_timezone)
+    for offset in range(-2, 2):
+      # Timezones can shift the displayed solstice date; the exact UT
+      # comparison below determines which nearby sunrise qualifies.
+      civil_date = solstice_date + timedelta(days=offset)
+      record = records_by_date.get(civil_date)
+      if record is not None and record.sunrise_jd > solstice_jd:
+        selected.append(civil_date)
+        break
+  return sorted(set(selected))
+
+
+def _is_southern_hemisphere(geopos):
+  return geopos is not None and float(geopos[1]) < 0.0
+
+
+def select_uttarayana_dates(records, geopos=None, timezone_name=None):
+  """First sunrise after the local winter solstice.
+
+    The local winter solstice is the June solstice south of the equator and
+    the December solstice at or north of the equator.
+    """
+  longitude = 90.0 if _is_southern_hemisphere(geopos) else 270.0
+  return select_solstice_dates(records, longitude, timezone_name=timezone_name)
+
+
+def select_dakshinayana_dates(records, geopos=None, timezone_name=None):
+  """First sunrise after the local summer solstice.
+
+    The local summer solstice is the December solstice south of the equator
+    and the June solstice at or north of the equator.
+    """
+  longitude = 270.0 if _is_southern_hemisphere(geopos) else 90.0
+  return select_solstice_dates(records, longitude, timezone_name=timezone_name)
+
+
+# Seasonal catalog and each entry's complete resolution policy.
+# Plain entries use masa+tithi; ``selector`` is a custom date-finder function
+# for festivals that need extra rules (sankranti, upakarma, solstice, …).
+FESTIVAL_RULES = [
+  FestivalRule("Ugadi", masa=1, tithi="S1", allow_adhika=True),
+  FestivalRule("Rama Navami", masa=1, tithi="S9"),
+  FestivalRule("Hanuman Jayanti", masa=1, tithi="S15"),
+  FestivalRule("Mesha Sankranti", selector=select_mesha_sankranti_dates),
+  FestivalRule("Akshaya Tritiya", masa=2, tithi="S3"),
+  FestivalRule("Vasavi Jayanti", masa=2, tithi="S10"),
+  FestivalRule("Narasimha Jayanti", masa=2, tithi="S14"),
+  FestivalRule("Vata Savitri Purnima", masa=3, tithi="S15"),
+  FestivalRule("Dakshinayana", selector=select_dakshinayana_dates, location_aware=True),
+  FestivalRule("Guru Purnima", masa=4, tithi="S15"),
+  FestivalRule("Naga Panchami", masa=5, tithi="S5"),
+  FestivalRule("Varamahalakshmi Vrata", selector=select_varamahalakshmi_dates),
+  FestivalRule("Rig Upakarma", selector=select_rig_upakarma_dates, location_aware=True),
+  FestivalRule("Yajur Upakarma", selector=select_yajur_upakarma_dates, location_aware=True),
+  FestivalRule("Raksha Bandhan", masa=5, tithi="S15"),
+  FestivalRule("Sama Upakarma", selector=select_sama_upakarma_dates, location_aware=True),
+  FestivalRule("Onam", selector=select_onam_dates),
+  FestivalRule("Janmashtami", masa=5, tithi="K8"),
+  FestivalRule("Swarna Gowri Vrata", masa=6, tithi="S3"),
+  FestivalRule("Ganesha Chaturthi", masa=6, tithi="S4"),
+  FestivalRule("Rishi Panchami", masa=6, tithi="S5"),
+  FestivalRule("Ananta Chaturdashi", masa=6, tithi="S14"),
+  FestivalRule("Mahalaya Amavasya", masa=6, tithi="K15"),
+  FestivalRule("Durga Ashtami", masa=7, tithi="S8"),
+  FestivalRule("Ayudha Puja", masa=7, tithi="S9"),
+  FestivalRule("Vijayadashami", masa=7, tithi="S10"),
+  FestivalRule("Karwa Chauth", masa=7, tithi="K4"),
+  FestivalRule("Dhana Trayodashi", masa=7, tithi="K13"),
+  FestivalRule("Naraka Chaturdashi", masa=7, tithi="K14"),
+  FestivalRule("Deepavali", masa=7, tithi="K15"),
+  FestivalRule("Bali Padyami", masa=8, tithi="S1"),
+  FestivalRule("Surya Shashthi / Chhath", masa=8, tithi="S6"),
+  FestivalRule("Gita Jayanti", masa=9, tithi="S11"),
+  FestivalRule("Uttarayana", selector=select_uttarayana_dates, location_aware=True),
+  FestivalRule("Vaikuntha Ekadashi", selector=select_vaikuntha_ekadashi_dates),
+  FestivalRule("Makara Sankranti", selector=select_makara_sankranti_dates),
+  FestivalRule("Vasavi Atmarpana", masa=11, tithi="S2"),
+  FestivalRule("Vasanta Panchami", masa=11, tithi="S5"),
+  FestivalRule("Ratha Saptami", masa=11, tithi="S7"),
+  FestivalRule("VSN Jayanti", masa=11, tithi="S11"),
+  FestivalRule("Maha Shivaratri", masa=11, tithi="K14"),
+  FestivalRule("Kama Dahana (Holi)", masa=12, tithi="S15")
+]
+
+
+def select_dates_for_rule(rule, records, geopos=None, timezone_name=None):
+  """Run a custom selector or the standard māsa+tithi selector."""
+  if not rule.selector:
+    dates = select_plain_tithi_dates(records, rule.masa, rule.tithi, allow_adhika=rule.allow_adhika)
+  elif rule.location_aware:
+    dates = rule.selector(records, geopos=geopos, timezone_name=timezone_name)
+  else:
+    dates = rule.selector(records)
+  return dates
+
+
+def resolve_festivals(records, target_dates, geopos=None, timezone_name=None, enabled_names=None):
+  """Return PDF day markers and footer entries for enabled festivals.
+
+    ``markers_by_date`` looks like ``{date: [1, 3]}``; ``entries`` looks like
+    ``[(1, "Mar 19", "Ugadi")]``. Selectors may inspect boundary records, but
+    only dates in ``target_dates`` are printed.
+    """
+  target_dates = set(target_dates)
+  markers_by_date = {}
+  entries = []
+  enabled_rules = []
+  for rule in FESTIVAL_RULES:
+    if enabled_names is None or rule.name in enabled_names:
+      enabled_rules.append(rule)
+
+  for marker, rule in enumerate(enabled_rules, start=1):
+    candidates = select_dates_for_rule(rule, records, geopos, timezone_name)
+    dates = []
+    for civil_date in candidates:
+      if civil_date in target_dates:
+        dates.append(civil_date)
+    for civil_date in dates:
+      markers_by_date.setdefault(civil_date, []).append(marker)
+    entries.append((marker, format_festival_dates(dates), rule.name))
+  return markers_by_date, entries
+
+
+def ekadashi_dates_from_records(records):
+  """Civil days for S11 and K11 using sunrise, vriddhi, and kshaya rules."""
+  selected = set()
+  for tithi in EKADASHI_TITHIS:
+    selected.update(select_tithi_dates(records, tithi))
+  return sorted(selected)
+
+
+def _place_for_civil(civil_date, geopos, timezone_name):
+  """``panchanga.Place`` for ``civil_date`` at ``geopos`` (lon, lat, alt)."""
+  lon, lat, _alt = geopos
+  return panchanga.Place(lat, lon, utc_offset_hours(timezone_name, civil_date))
+
+
+def _sunrise_tithi_end_jd_ut(civil_date, place):
+  """UT Julian day when the tithi prevailing at sunrise on ``civil_date`` ends."""
+  jd = gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
+  tithi_info = panchanga.tithi(jd, place)
+  hours, minutes, seconds = tithi_info[1]
+  ends_hours = hours + minutes / 60.0 + seconds / 3600.0
+  return jd + (ends_hours - place.timezone) / 24.0
+
+
+def shraddha_tithi_at_aparahna(record, geopos, timezone_name):
+  """Return the tithi number at Aparāhṇa start for one sunrise record.
+
+  Aparāhṇa starts at three-fifths of the local daylight interval. The
+  daylight duration and lunar phase come from the existing panchāṅga helpers;
+  no sunrise-tithi approximation is used.
+  """
+  jd = gregorian_to_jd(panchanga.Date(record.civil_date.year, record.civil_date.month, record.civil_date.day))
+  place = _place_for_civil(record.civil_date, geopos, timezone_name)
+  try:
+    daylight_hours = panchanga.day_duration(jd, place)[0]
+  except Exception:
+    return None
+  if daylight_hours <= 0:
+    return None
+  aparahna_start_jd = record.sunrise_jd + (daylight_hours / 24.0) * 3 / 5
+  return int(panchanga.lunar_phase(aparahna_start_jd) // 12) + 1
+
+
+def shraddha_tithis_by_date(records, geopos, timezone_name):
+  """Map each Gregorian date to its tithi at local Aparāhṇa start."""
+  result = {}
+  for record in records:
+    tithi_number = shraddha_tithi_at_aparahna(record, geopos, timezone_name)
+    if tithi_number is not None:
+      result[record.civil_date] = tithi_number
+  return result
+
+
+def classify_ekadashi_upavasa(records_by_date, upavasa_date):
+  """Return ``normal``, ``kshaya``, or ``vriddhi`` for an upavāsa civil day.
+
+  ``records_by_date`` maps civil date → DayRecord. Caller must only pass dates
+  from ``ekadashi_dates_from_records``. Vṛddhi means the same S11/K11 also
+  prevails at the next sunrise; kṣaya means sunrise on the upavāsa day is not
+  already tithi 11.
+  """
+  record = records_by_date.get(upavasa_date)
+  if record is None:
+    raise KeyError(f"no DayRecord for upavasa date {upavasa_date}")
+  if record.tithi not in EKADASHI_TITHIS:
+    return "kshaya"
+  following = records_by_date.get(upavasa_date + timedelta(days=1))
+  if following is not None and following.tithi == record.tithi:
+    return "vriddhi"
+  return "normal"
+
+
+def ekadashi_parana_for_upavasa(records_by_date, upavasa_date, geopos, timezone_name):
+  """Return the practical pāraṇa window for one upavāsa day.
+
+  Rules (simplified Udaya-Vyāpinī):
+
+  * normal / kṣaya — anchor at the next civil day's sunrise
+  * vṛddhi — anchor at the later of the next sunrise and Ekādaśī's end
+  * end — four ghaṭikās (96 minutes) after that anchor
+
+  The fixed operational window intentionally does not wait for Dvādaśī's
+  astronomical end.  This keeps the deadline usable for prayer and food
+  preparation when Dvādaśī ends shortly after sunrise, and avoids a deadline
+  on the following morning when Dvādaśī is long.  In the Ekādaśī-kṣaya case,
+  the next sunrise is normally Trayodaśī sunrise, so this gives the practical
+  fallback window on that day.
+
+  Returns ``EkadashiParana``, or ``None`` when the next civil day is missing
+  from ``records_by_date`` (no sunrise / outside the loaded window).
+  """
+  parana_date = upavasa_date + timedelta(days=1)
+  parana_record = records_by_date.get(parana_date)
+  if parana_record is None:
+    return None
+  case = classify_ekadashi_upavasa(records_by_date, upavasa_date)
+  parana_jd = parana_record.sunrise_jd
+  if case == "vriddhi":
+    place = _place_for_civil(upavasa_date, geopos, timezone_name)
+    ekadashi_end_jd = _sunrise_tithi_end_jd_ut(upavasa_date, place)
+    if ekadashi_end_jd > parana_jd:
+      parana_jd = ekadashi_end_jd
+  parana_end_jd = parana_jd + PARANA_WINDOW_JD
+  return EkadashiParana(upavasa_date, parana_date, parana_jd, parana_end_jd, case)
+
+
+def ekadashi_parana_by_parana_date(records, geopos, timezone_name):
+  """Map pāraṇa civil date → ``EkadashiParana`` for every upavāsa in ``records``."""
+  records_by_date = {record.civil_date: record for record in records}
+  result = {}
+  for upavasa_date in ekadashi_dates_from_records(records):
+    entry = ekadashi_parana_for_upavasa(records_by_date, upavasa_date, geopos, timezone_name)
+    if entry is not None:
+      result[entry.parana_date] = entry
+  return result

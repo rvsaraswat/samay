@@ -1,0 +1,245 @@
+Festival dates and conventions
+==============================
+
+See [README.CALENDARS.md](README.CALENDARS.md) for general PDF usage. This file documents
+festival configuration and how festival dates are computed.
+Lunar-month *display* may be amānta or pūrṇimānta; the festival catalog itself
+is keyed by amānta month numbers so civil dates stay stable across display
+modes.
+
+Festival and Ekadashi dates are resolved for the selected location in
+`festival_rules.py` (ruleset `Udaya-Vyapini-1.1`). The older multi-policy
+implementation is kept under `experimental/` for reference only.
+
+Selecting festivals
+-------------------
+
+Which festivals appear in the PDF is controlled by `config/festivals.cfg`.
+The `[festivals]` section is shared by the annual and monthly PDFs; its `yes`
+entries are included in both. The annual PDF supports at most 30 festivals
+because its footer is a fixed 6×5 grid. The optional `[extra]` section is used
+only by the monthly PDF, so its `yes` entries can add festivals beyond that
+annual limit.
+
+Names in `[festivals]` and `[extra]` must not overlap. Festival names are not
+pinned to either section: you may move any catalog name between them. Placement
+controls scope: `yes` in `[festivals]` enables it in both PDFs, while `yes` in
+`[extra]` enables it only in the monthly PDF. Use `no` to disable it in that
+section. Every catalog name must appear in one of the two sections. Values may
+be `yes`/`no` (also `true`/`false`, `1`/`0`, `on`/`off`). Unknown names are
+rejected when the monthly selection is loaded. Override the path with
+`--festivals FILE.cfg` if needed.
+
+The shipped defaults are a regional compromise; edit the cfg to match your
+locality. The `[festivals]` section contains the 30 annual festivals. The
+`[extra]` section contains monthly-only entries and disabled catalog entries,
+including Mesha and Makara Sankranti (which are already marked by the PDF's
+solar saṅkrānti grid), Karwa Chauth, Gita Jayanti, and Chhath.
+
+Recurring observances vs annual festivals
+-----------------------------------------
+
+The festival catalog is configured through `festivals.cfg`. Fortnightly/monthly
+observances are always on and need no cfg keys -- they are painted as
+coloured bars on the monthly grid (every occurrence) and as underlines on
+the annual page (weekday specials by default: Pradosham (Mon/Sat),
+Sankashtahara (Tue); `--recurring all` underlines every occurrence).
+Both are explained in the footer legends:
+
+* **Ekadashi** -- every `S11` and `K11` at sunrise (teal bar + vrat name).
+  Pāraṇā uses the next civil day as its operational break-fast day; vṛddhi
+  anchors it after ekādaśī ends. The monthly PDF shows a practical four-ghaṭikā
+  window as ``Pāraṇā: HH:MM – HH:MM``.
+* **Pradosham** -- Trayodashi (`S13` or `K13`) prevailing at sunset
+  (purple bar). This bimonthly Shiva festival occurs twice per lunar month.
+  Vriddhi keeps the earlier day when Trayodashi prevails at sunset on
+  consecutive days; kshaya picks the latter civil day when Trayodashi is
+  skipped between two sunsets. Without location/timezone, falls back to
+  sunrise-based selection.
+* **Sankashtahara Chaturthi** -- Krishna Chaturthi (`K4`) prevailing at the
+  Hindu-day moonrise in ``[sunrise, next sunrise)`` (indigo bar). Same window
+  as the calendar Moon line, so a pre-sunrise rise is attributed to the
+  previous civil date. Occurs during Krishna Paksha. Vriddhi keeps the earlier
+  day when K4 prevails at moonrise on consecutive days; kshaya picks the
+  latter civil day when K4 is skipped between two moonrises. Without
+  location/timezone, falls back to sunrise-based selection.
+
+Common sunrise rule (udaya-vyāpinī)
+-----------------------------------
+
+A festival tied to a tithi uses the civil day where that tithi prevails at local
+sunrise.
+
+- If the same tithi covers two consecutive sunrises (vriddhi), the earlier day
+  is kept.
+- If the tithi is skipped between sunrises (kshaya), the later civil day is kept.
+
+Adhika (intercalary) masas are skipped for ordinary festivals. Ugadi is the
+exception: when both adhika and nija Chaitra `S1` occur, only the adhika date is
+marked.
+
+Most numbered festivals are plain lunar-masa + tithi pairs under that rule (for
+example Rama Navami = Chaitra `S9`, Deepavali = Ashvina `K15`). The catalog
+stores those masa numbers in the amānta convention so a festival’s civil date
+is stable whether the PDF/WebUI *displays* amānta or pūrṇimānta māsa names.
+Ekadashi underlines use the same sunrise rule for every `S11` and `K11`; they
+are not the *Dharma-sindhu* four-ghati Arunodaya / Mahadvadashi machinery.
+
+Non-tithi festivals
+-------------------
+
+These have dedicated selectors (dispatch by catalog name):
+
+* **Varamahalakshmi Vrata** -- Friday strictly before nija Sravana Purnima
+  (`S15`).
+* **Yajur Upakarma** -- nija Sravana `S15`. If eclipsed (see below), postpone to
+  Bhadrapada `S15`.
+* **Rig Upakarma** -- nija day whose sunrise nakshatra is Sravana (`22`); if
+  that nakshatra is missing at sunrise in Sravana masa, or the chosen day is
+  eclipsed (see below), use Bhadrapada's Sravana-nakshatra day. Vriddhi keeps
+  the former sunrise.
+
+  Upakarma eclipse test (Yajur and Rig): postpone when the instant of a
+  locally visible non-penumbral lunar eclipse's maximum falls inside the
+  Hindu day that starts on the chosen date, i.e. inside
+  `[sunrise, next sunrise)`. An eclipse before that morning's sunrise
+  therefore belongs to the previous date: it does not postpone the chosen
+  Upakarma day, and it does not mark that day's cell either. Solar and purely
+  penumbral lunar eclipses are ignored. Using the same window as the printed
+  wavy eclipse mark keeps a date and its cell in agreement; using the
+  maximum's moment avoids interval arithmetic.
+* **Onam** -- sunrise nakshatra Sravana (`22`) while the Sun is in Simha
+  (raasi 5); if none, try Kanya (raasi 6). Same vriddhi / empty-primary
+  pattern as Rig Upakarma, but keyed on solar rasi rather than lunar masa, and
+  with no eclipse test.
+* **Vaikuntha Ekadashi** -- a Margashirsha or Pausha Shukla Ekadashi upavasa
+  day while the Sun is in Dhanur at sunrise. If none qualify, the PDF prints
+  `None`.
+* **Mesha Sankranti** / **Makara Sankranti** -- first civil sunrise after the
+  Sun enters Mesha (raasi 1) or Makara (raasi 10) respectively. Both use the
+  shared sankranti helper, the same rule as the twelve solar-month markers on
+  the PDF.
+* **Uttarayana** / **Dakshinayana** -- first civil sunrise after the tropical
+  winter / summer solstice moment, respectively. At or north of the equator,
+  Uttarayana uses the December solstice and Dakshinayana the June solstice;
+  these assignments switch south of the equator. The event moment is compared
+  with the local sunrise JD, so a solstice after sunrise is printed on the next
+  civil day. Both are on by default in ``festivals.cfg``.
+
+Location dependence
+-------------------
+
+Dates are sunrise- and location-dependent, so the same festival can fall on
+different Gregorian days in different cities. Above the polar circles, where
+the Sun goes days or months without rising or setting, `panchanga.sunrise()`
+and `panchanga.sunset()` fall back to the matching meridian transit (solar
+noon in polar night, solar midnight in midnight sun), so festivals resolve
+for any city on any date. See "Polar regions" in the top-level README.
+
+Rationale
+---------
+
+### Inconsistent sindhu books
+
+*Dharma-sindhu* and *Nirnaya-sindhu* decide many observances with layered kala
+tests (Arunodaya, Purvahna, Madhyahna, Aparahna, Pradosha, Nishitha),
+viddha/adhikya cases, Bhadra checks, and puja-muhurta detail. That apparatus
+matters for ritual timing, but it is a poor fit for a one-page PDF calendar
+whose job is to mark which *civil day* carries each festival for a given city
+and year. There is usually no consistent logic either; just that regional and
+historical preferences are codified in these books. For a universal Hindu, these
+principles are meaningless.
+
+For example, "4-ghati before arunodaya" maps to 96 minutes before sunrise, which
+is acceptable in India, but at higher latitudes (e.g. Europe or USA), there
+might not be 96 minutes after sunset and next sunrise at all! Another example:
+Dussehra is decided by daśamī-during-pūrvāhna in Bengal and Kerala but the rest
+of India follows daśamī-during-aparāhna -- there is no logical reason to prefer
+one over the other.
+
+Another point of contention is Ekadashi rules between Vaishnavas and
+non-Vaishnavas. Before computerised Panchangas, many pandits used to calculate
+tithis and nakshatras using simplified arithmetic, which would lead to
+inaccuracies. Consider at sunrise daśamī tithi which ends, say, 30 min after
+sunrise. Until about a century ago, a temple priest might've computed that day
+as ekādaśī-at-sunrise (due to approximate formulas) and unintentionally led a
+devotee to fast on the wrong day. Therefore, Vaiṣṇavas came up with a rule: do
+not observe fasting on the day when daśamī was still active 48 minutes _before_
+sunrise -- this would tolerate computational errors by pandits. A similar logic
+was applied for breaking the fast (pāraṇa): do not break fast until 25% of
+dvādaśī has elapsed (this would tolerate errors in dvādaśī-at-sunrise
+computation). However, we don't need such complexities today, for we can compute
+panchanga exactly for any given day and location. Ekadashi fasting is for
+spiritual upliftment, not panchanga appeasement.
+
+Another drawback is the dissimilarity in the name of the festival and its
+observance. Naraka Chaturdashi and Deepavali always occur on the same day,
+sometimes on Chaturdashi and sometimes on Amavasya -- the festival name of
+"Chaturdashi" becomes meaningless. Consider 2026 Helsinki example:
+
+| Date   | Tithi at sunrise  | Dharma Sindhu                 | Udaya-vyāpinī      |
+|--------|-------------------|-------------------------------|--------------------|
+| Nov 6  | Trayodashi        | Dhanteras (dhana trayodashi)  | Dhanteras          |
+| Nov 7  | Chaturdashi       | No festival today             | Naraka Chaturdashi |
+| Nov 8  | Amavasya          | Naraka Chaturdashi, Deepavali | Deepavali          |
+| Nov 9  | Amavasya (adhika) | Bali Padyami                  | Nothing            |
+| Nov 10 | Pratipada         | No festival today             | Bali Padyami       |
+| Oct 19 | Ashtami           | Durgashtami, Mahanavami       | Durgashtami        |
+| Oct 20 | Navami            | Vijayadashami                 | Mahanavami         |
+| Oct 21 | Dashami           | No festival today             | Vijayadashami      |
+
+The very name "Bali Padyami" presupposes that the festival occurs on the day of
+Pāḍya, i.e. Pratipadā but Dharma Sindhu's complex rules assigns it to Amavasya
+day. Our Udaya-vyāpinī ruleset restores the consistency, as also followed by the
+[official holiday calendar][holiday-calendar].
+
+[holiday-calendar]: https://smarteduguide.com/holiday/official-karnataka-high-court-calendar-2026/
+
+### Sane rules
+
+This calendar therefore uses a single shared rule for ordinary tithi festivals
+and for Ekadashi underlines: *udaya-vyāpinī* (tithi ownership at local sunrise),
+with fixed vriddhi and kshaya handling. The aims are:
+
+* One rule that readers can understand without reading a dense book.
+* Deterministic dates for any year and location where sunrise exists.
+* Enough uniformity that the same engine covers the whole catalog instead of
+  a different special case per festival.
+
+Divergence from traditional printed panchangas and from civil holiday lists
+is expected and accepted. Two concrete motivations for the vriddhi/kshaya
+choices:
+
+* This 'kshaya' logic helps us to avoid celebrating festivals on Amavasya day.
+  For example, in India, 2026-03-19 is Amavasya and the next day is
+  śukla-dvitīya. Traditional (Dharma-sindhu) calendar celebrates the Hindu New
+  Year (Ugadi) on Amavasya day though, according to the same book, Caitra month
+  begins on the next day! Would you celebrate the New Year's Day in December
+  although the new year begins in January? Nope! Another example: You want to
+  enjoy a festival feast on Vijaya Dashami (Dussehra) but the Ekadashi is
+  kshaya. As per above the rule, the fasting is pushed to the next day after
+  Dussehra, so no problem.
+
+* The 'vriddhi' rule prioritises the principle that one should _never_ eat
+  during the maximal window of an ekadashi tithi. For example, in Tirupati, both
+  2027-03-03 and 2027-03-04 at sunrise are Ekadashi (no daśamī-vedha). Yet, all
+  calendars (incl. Dharma-sindhu, Smarta, Madhva, Srivaishnava) prescribe
+  fasting on the latter date, essentially allowing food consumption on the
+  entire 3rd March which has ahorātra ekādaśī tithi! Defeats the whole emphasis
+  on ekadasi fasting. Different sampradāyas may differ on pāraṇa rules (breaking
+  the fast), that's alright, but in my opinion, keeping upavāsa is more
+  important.
+
+Ekadashi fast is broken on the next civil day after sunrise for normal and
+kṣaya observances. In the kṣaya case, this is normally Trayodaśī sunrise because
+upavāsa was kept on the Dvādaśī-at-sunrise day. For vṛddhi, the pāraṇā anchor is
+``max(next sunrise, ekādaśī end)``. The operational pāraṇā deadline is four
+ghaṭikās (96 minutes) after that anchor; the rule intentionally does not wait
+for a potentially next-morning Dvādaśī end. The monthly PDF prints
+``Pāraṇā: HH:MM – HH:MM`` using an en dash. This is a simplified practical
+calendar rule, not a sampradāya-specific pāraṇa calculation.
+
+Rules that are not plain masa+tithi markers (Sankranti, Onam, Upakarma,
+Varamahalakshmi, Vaikuntha Ekadashi) keep dedicated selectors, still written
+in the same sunrise-first spirit. The older multi-policy / *Dharma-sindhu*
+experiments remain under `experimental/` for comparison.

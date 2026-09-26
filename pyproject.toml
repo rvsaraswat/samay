@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drik-panchanga"
+version = "1.0.0"
+description = "Observational Indian lunisolar calendar (Drik Panchanga) using Swiss Ephemeris"
+readme = "docs/README.pypi.md"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.9"
+authors = [
+  { name = "Satish BD" },
+]
+keywords = [
+  "panchanga",
+  "hindu",
+  "calendar",
+  "tithi",
+  "nakshatra",
+  "swiss-ephemeris",
+  "pdf",
+  "calendar-pdf",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Religion",
+  "Topic :: Scientific/Engineering :: Astronomy",
+  "Topic :: Printing",
+]
+dependencies = [
+  "pyswisseph",
+  "tzdata; platform_system == 'Windows'",
+]
+
+[project.optional-dependencies]
+pdf = ["reportlab"]
+all = ["reportlab"]
+
+[project.scripts]
+drik-panchanga-short = "generate_panchanga_calendar:main"
+drik-panchanga-long = "generate_monthly_calendar:main"
+
+[project.urls]
+Homepage = "https://github.com/bdsatish/drik-panchanga"
+Repository = "https://github.com/bdsatish/drik-panchanga"
+Issues = "https://github.com/bdsatish/drik-panchanga/issues"
+
+# Data, fonts, and config are shipped alongside the Python modules via [tool.setuptools.package-data].
+[tool.setuptools]
+py-modules = [
+  "datetime_helper",
+  "panchanga",
+  "festival_rules",
+  "generate_panchanga_calendar",
+  "generate_monthly_calendar",
+]
+packages = ["data", "fonts", "config"]
+
+[tool.setuptools.package-data]
+"*" = ["data/*", "fonts/*", "config/*"]
