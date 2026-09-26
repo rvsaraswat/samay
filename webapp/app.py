@@ -118,7 +118,7 @@ def suggest_city_for_ip(ip):
 
 @app.get("/")
 def index():
-  return render_template("index.html")
+  return render_template("index.html", mode="calendar")
 
 
 @app.get("/today")

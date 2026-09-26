@@ -1,0 +1,30 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "28000:28000"
+    environment:
+      - DATABASE_URL=sqlite:///./vedic_clock.db
+      - SECRET_KEY=ghadi-local-development-secret-key-change-me-32chars
+      - FRONTEND_ORIGINS=http://localhost:3001,http://localhost:3002
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 28000
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        API_BASE_URL: ${API_BASE_URL:-http://localhost:28000}
+    ports:
+      - "${FRONTEND_PORT:-3001}:80"
+    restart: always
+    depends_on:
+      - backend

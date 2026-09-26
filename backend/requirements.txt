@@ -1,0 +1,24 @@
+# Backend Dependencies for Aarohanam - Vedic Time Companion
+fastapi>=0.104.0,<0.105.0
+uvicorn[standard]>=0.24.0,<0.25.0
+sqlalchemy>=2.0.21,<3.0.0
+# Default runtime uses SQLite (see app/config.py). psycopg2-binary is included
+# so you can point DATABASE_URL at Postgres without changing dependencies.
+psycopg2-binary>=2.9.9,<3.0.0
+pydantic>=2.4.0,<3.0.0
+pydantic-settings>=2.0.0,<3.0.0
+# Required for pydantic EmailStr
+email-validator>=2.0.0,<3.0.0
+python-jose[cryptography]>=3.3.0,<4.0.0
+passlib[bcrypt]>=1.7.4,<2.0.0
+# Pinned <4.1 for passlib 1.7.4 compatibility (bcrypt.__about__ removal in 4.1)
+bcrypt>=4.0.0,<4.1
+alembic>=1.12.1,<2.0.0
+pytz>=2024.1
+tzdata>=2024.1
+pyswisseph>=2.10.3.2,<3.0.0
+python-multipart>=0.0.6,<0.1.0
+httpx>=0.25.2,<0.26.0
+slowapi>=0.1.9,<0.2.0
+redis>=5.0,<6.0
+pytest>=8.0,<9.0
