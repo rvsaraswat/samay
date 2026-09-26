@@ -230,6 +230,12 @@ button:hover, .button:hover { filter: brightness(1.08); }
 .insight-row > span, .event-mark { display: grid; width: 26px; height: 26px; flex: 0 0 26px; place-items: center; border: 1px solid var(--cosmic-amber); border-radius: 50%; color: var(--cosmic-amber); font-size: .78rem; }
 .insight-row strong, .cosmic-event strong { color: var(--cosmic-text); font-size: .84rem; }
 .insight-row p, .cosmic-event small { display: block; margin: 2px 0 0; color: var(--cosmic-muted); font-size: .74rem; line-height: 1.4; }
+.today-celestial { margin-top: 13px; padding-top: 13px; border-top: 1px solid var(--cosmic-line); }
+.today-celestial .panel-kicker { margin-bottom: 8px; color: var(--cosmic-cyan); }
+.today-celestial-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.today-celestial-grid div { display: grid; gap: 3px; }
+.today-celestial-grid span { color: var(--cosmic-muted); font-size: .74rem; }
+.today-celestial-grid strong { color: var(--cosmic-text); font-size: .82rem; }
 .cosmic-rail { display: grid; gap: 12px; min-width: 0; }
 .cosmic-rail .cosmic-panel { padding: 14px; }
 .cosmic-event .event-mark { border-color: var(--cosmic-cyan); color: var(--cosmic-cyan); }
@@ -241,6 +247,9 @@ button:hover, .button:hover { filter: brightness(1.08); }
 .cosmic-dashboard .festival-mini-item { padding: 8px 0; border-color: var(--cosmic-line); font-size: .8rem; }
 .cosmic-dashboard .festival-mini-item strong { color: var(--cosmic-text); }
 .cosmic-dashboard .festival-mini-item span { color: var(--cosmic-muted); }
+.upcoming-festival { display: grid; gap: 3px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--cosmic-line); }
+.upcoming-festival strong { color: var(--cosmic-cyan); font-size: .74rem; }
+.upcoming-festival span { color: var(--cosmic-text); font-size: .8rem; }
 .cosmic-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; color: var(--cosmic-muted); font-size: .72rem; text-align: center; }
 .calendar-weekday { padding-bottom: 4px; color: var(--cosmic-cyan); font-size: .66rem; }
 .calendar-day { position: relative; display: grid; min-height: 24px; place-items: center; border: 1px solid transparent; border-radius: 3px; }
@@ -257,15 +266,52 @@ button:hover, .button:hover { filter: brightness(1.08); }
 .cosmic-muhurta .timeline-item time { color: var(--cosmic-amber); font-size: .74rem; }
 .cosmic-muhurta .timeline-item strong, .cosmic-muhurta .timeline-item .muted { color: var(--cosmic-muted); font-size: .74rem; }
 @media (min-width: 1181px) {
+ .cosmic-page-today .cosmic-wheel-panel, .cosmic-page-today .cosmic-positions, .cosmic-page-today .cosmic-explainers { display: none; }
+ .cosmic-page-today .cosmic-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "insights" "rail"; grid-template-rows: auto auto; }
+ .cosmic-page-today .cosmic-insights { grid-area: insights; }
+ .cosmic-page-today .cosmic-rail { display: grid; grid-area: rail; grid-column: auto; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+ .cosmic-page-today .cosmic-rail > .cosmic-panel { grid-area: auto; }
+ .cosmic-page-today .cosmic-bottom { grid-template-columns: minmax(0, 1fr); }
+ .cosmic-page-today.cosmic-dashboard { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; align-content: start; }
+ .cosmic-page-today .cosmic-masthead, .cosmic-page-today .cosmic-status, .cosmic-page-today .cosmic-panchanga-strip { grid-column: 1 / -1; }
+ .cosmic-page-today .cosmic-masthead { grid-row: 1; }
+ .cosmic-page-today .cosmic-status { grid-row: 2; }
+ .cosmic-page-today .cosmic-panchanga-strip { grid-row: 3; }
+ .cosmic-page-today .cosmic-grid, .cosmic-page-today .cosmic-bottom, .cosmic-page-today .cosmic-rail { display: contents; }
+ .cosmic-page-today .cosmic-rail > .cosmic-panel:nth-child(2) { grid-column: 1 / span 3; grid-row: 4; }
+ .cosmic-page-today .cosmic-rail > .cosmic-calendar-panel { grid-column: 4 / span 3; grid-row: 4; }
+ .cosmic-page-today .cosmic-insights { grid-column: 1 / span 2; grid-row: 5; }
+ .cosmic-page-today .cosmic-rail > .cosmic-panel:nth-child(1) { grid-column: 3 / span 2; grid-row: 5; }
+ .cosmic-page-today .cosmic-muhurta { grid-column: 5 / span 2; grid-row: 5; }
+}
+@media (max-width: 1180px) {
+ .cosmic-page-today .cosmic-wheel-panel, .cosmic-page-today .cosmic-positions, .cosmic-page-today .cosmic-explainers { display: none; }
+ .cosmic-page-today .cosmic-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "insights" "rail"; grid-template-rows: auto auto; }
+ .cosmic-page-today .cosmic-insights { grid-area: insights; }
+ .cosmic-page-today .cosmic-rail { display: grid; grid-area: rail; grid-column: auto; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+ .cosmic-page-today .cosmic-rail > .cosmic-panel { grid-area: auto; }
+ .cosmic-page-today .cosmic-bottom { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width: 1181px) {
  .cosmic-grid { grid-template-areas: "wheel insights transitions" "wheel calendar festivals" "positions positions positions"; grid-template-rows: auto auto auto; }
  .cosmic-rail { display: contents; }
  .cosmic-rail > .cosmic-panel:nth-child(1) { grid-area: transitions; }
  .cosmic-rail > .cosmic-panel:nth-child(2) { grid-area: festivals; }
  .cosmic-rail > .cosmic-calendar-panel { grid-area: calendar; }
+ .cosmic-page-today .cosmic-rail > .cosmic-panel:nth-child(1), .cosmic-page-today .cosmic-rail > .cosmic-panel:nth-child(2), .cosmic-page-today .cosmic-rail > .cosmic-calendar-panel { grid-area: auto; }
+}
+@media (min-width: 1181px) {
+ .cosmic-page-today #status { grid-column: 1 / -1; grid-row: 2; }
+ .cosmic-page-today .cosmic-rail > .cosmic-panel:nth-child(2) { grid-column: 1 / span 3; grid-row: 4; }
+ .cosmic-page-today .cosmic-rail > .cosmic-calendar-panel { grid-column: 4 / span 3; grid-row: 4; }
+ .cosmic-page-today .cosmic-insights { grid-column: 1 / span 2; grid-row: 5; }
+ .cosmic-page-today .cosmic-rail > .cosmic-panel:nth-child(1) { grid-column: 3 / span 2; grid-row: 5; }
+ .cosmic-page-today .cosmic-muhurta { grid-column: 5 / span 2; grid-row: 5; }
 }
 @media (max-width: 1180px) { .cosmic-actions { display: grid; justify-items: end; } .cosmic-panchanga-strip { grid-template-columns: repeat(4, 1fr); } .cosmic-date-card { grid-column: span 2; } .cosmic-sun-times { grid-column: span 2; border-right: 0; } .cosmic-grid { grid-template-columns: minmax(320px, 1.1fr) minmax(280px, .9fr); grid-template-areas: "wheel insights" "positions positions" "rail rail"; grid-template-rows: auto auto auto; } .cosmic-wheel-panel { grid-row: auto; } .cosmic-rail { grid-area: rail; grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr); } .cosmic-bottom { grid-template-columns: 1fr; } }
 @media (max-width: 1180px) and (min-width: 761px) { .sidebar { display: none; } .app-body { display: block; } .main-content { padding-inline: 28px; } }
 @media (max-width: 760px) { .cosmic-dashboard { margin: -28px -15px -100px; padding: 22px 15px 100px; } .cosmic-masthead { display: block; } .cosmic-masthead h1 { font-size: 2rem; } .cosmic-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; margin-top: 18px; } .cosmic-actions .controls { flex: 1 1 100%; flex-wrap: wrap; } .cosmic-actions .controls .field { min-width: 135px; } .cosmic-panchanga-strip { grid-template-columns: repeat(2, 1fr); } .cosmic-date-card, .cosmic-limb, .cosmic-sun-times { grid-column: auto; border-right: 1px solid var(--cosmic-line); } .cosmic-date-card { grid-column: span 2; } .cosmic-sun-times { grid-column: span 2; border-right: 0; } .cosmic-grid { display: block; } .cosmic-panel { margin-bottom: 12px; } .cosmic-wheel-panel { min-height: 0; } .cosmic-wheel-panel .wheel { width: min(100%, 390px); } .cosmic-rail { display: block; } .cosmic-rail .cosmic-panel { margin-bottom: 12px; } .cosmic-bottom { display: block; } .cosmic-explainer-grid { grid-template-columns: repeat(2, 1fr); } .cosmic-dashboard .table-wrap { max-height: none; } }
+@media (max-width: 760px) { .cosmic-page-today .cosmic-wheel-panel, .cosmic-page-today .cosmic-positions, .cosmic-page-today .cosmic-explainers { display: none; } .cosmic-page-today .cosmic-grid { display: block; } .cosmic-page-today .cosmic-rail { display: block; } }
 .term-popover { position: fixed; z-index: 20; width: min(300px, calc(100vw - 30px)); padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-raised); box-shadow: var(--shadow); }
 .term-popover strong { display: block; margin-bottom: 5px; color: var(--ink); font-family: var(--font-display); }
 .term-popover p { margin: 0; color: var(--muted-strong); font-size: .85rem; }
