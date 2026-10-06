@@ -379,6 +379,40 @@ button:hover, .button:hover { filter: brightness(1.08); }
 @media (max-width: 760px) { .calendar-workspace { padding: 16px; } .calendar-toolbar { align-items: start; display: block; } .calendar-nav { margin-top: 12px; } .calendar-filters { gap: 8px; } .calendar-date { min-height: 76px; padding: 6px; } .calendar-event { font-size: .58rem; } .calendar-year-view { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .birth-sidereal-layout { grid-template-columns: 1fr; } .birth-wheel { width: min(100%, 330px); } }
 @media (max-width: 760px) { .brand span.brand-lockup { display: grid; } .brand-lockup small { display: none; } }
+@media (min-width: 769px) and (max-width: 1180px) {
+  .main-content { padding-bottom: 100px; }
+  .mobile-nav {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    left: 14px;
+    z-index: 10;
+    display: flex;
+    gap: 4px;
+    padding: 7px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+  .mobile-nav a {
+    display: grid;
+    min-width: 92px;
+    flex: 1 0 92px;
+    justify-items: center;
+    gap: 2px;
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    font-size: .72rem;
+    text-align: center;
+  }
+  .mobile-nav a span:first-child { color: var(--saffron); font-size: 1.05rem; line-height: 1; }
+  .mobile-nav a span:last-child { white-space: nowrap; }
+  .mobile-nav a.active { background: var(--navy); color: var(--ink); font-weight: 700; }
+  .mobile-nav a.active span:first-child { color: #f3c978; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
 
 /* ==========================================================================
@@ -493,7 +527,7 @@ button:hover, .button:hover { filter: brightness(1.08); }
 }
 
 /* Fallback hiding mechanism: explicitly hide mobile navigation component if rendered on desktop widths */
-@media (min-width: 769px) {
+@media (min-width: 1181px) {
   .mobile-nav {
     display: none !important;
   }
