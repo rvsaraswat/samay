@@ -28,6 +28,35 @@
     t(key, values = {}) { return replaceTokens(translations[key] || values.fallback || key, values); },
     label(value) { const keys = { Tithi: 'common.tithi', Nakshatra: 'common.nakshatra', Yoga: 'common.yoga', Karana: 'common.karana', Vara: 'common.vara', Masa: 'common.masa', Sunrise: 'common.sunrise', Sunset: 'common.sunset', Moonrise: 'common.moonrise', Moonset: 'common.moonset', 'Rahu Kalam': 'common.rahu', 'Day duration': 'common.dayDuration', Ayanamsha: 'common.ayanamsha', 'Pratah Sandhya': 'common.pratah', 'Durmuhurta': 'common.durmuhurta', Varjyam: 'common.varjyam', Direct: 'common.direct', Retrograde: 'common.retrograde' }; return this.t(keys[value] || value); },
     value(value) { if (this.locale !== 'hi') return value; const values = { 'Caitra māsa': 'चैत्र मास', 'Vaiśākha māsa': 'वैशाख मास', 'Jyeṣṭha māsa': 'ज्येष्ठ मास', 'Āṣāḍha māsa': 'आषाढ़ मास', 'Śrāvaṇa māsa': 'श्रावण मास', 'Bhādrapada māsa': 'भाद्रपद मास', 'Āśvina māsa': 'आश्विन मास', 'Kārtika māsa': 'कार्तिक मास', 'Mārgaśīrṣa māsa': 'मार्गशीर्ष मास', 'Puṣya māsa': 'पौष मास', 'Māgha māsa': 'माघ मास', 'Phālguṇa māsa': 'फाल्गुन मास', 'Śukla pakṣa': 'शुक्ल पक्ष', 'Kṛṣṇa pakṣa': 'कृष्ण पक्ष', Pūrṇimā: 'पूर्णिमा', Amāvāsyā: 'अमावस्या', 'Śanivāra': 'शनिवार', 'Ravivāra': 'रविवार', 'Somavāra': 'सोमवार', 'Maṅgalavāra': 'मंगलवार', 'Budhavāra': 'बुधवार', 'Guruvāra': 'गुरुवार', 'Śukravāra': 'शुक्रवार', Mesha: 'मेष', Vrsabha: 'वृषभ', Mithuna: 'मिथुन', Karkata: 'कर्क', Simha: 'सिंह', Kanya: 'कन्या', Tula: 'तुला', Vrscika: 'वृश्चिक', Dhanu: 'धनु', Makara: 'मकर', Kumbha: 'कुंभ', Mina: 'मीन', kanyā: 'कन्या', karkāṭaka: 'कर्क', tulā: 'तुला', vṛṣabha: 'वृषभ', siṃha: 'सिंह', kumbha: 'कुंभ', mīna: 'मीन', Surya: 'सूर्य', Candra: 'चंद्र', Mangala: 'मंगल', Budha: 'बुध', Guru: 'गुरु', Sukra: 'शुक्र', Sani: 'शनि', Rahu: 'राहु', Ketu: 'केतु', Uranus: 'यूरेनस', Neptune: 'नेप्च्यून', Ashwini: 'अश्विनी', Bharani: 'भरणी', Krittika: 'कृत्तिका', Rohini: 'रोहिणी', Mrigashira: 'मृगशिरा', Ardra: 'आर्द्रा', Punarvasu: 'पुनर्वसु', Pushya: 'पुष्य', Ashlesha: 'आश्लेषा', Magha: 'मघा', 'Purva Phalguni': 'पूर्वा फाल्गुनी', 'Uttara Phalguni': 'उत्तरा फाल्गुनी', Hasta: 'हस्त', Chitra: 'चित्रा', Swati: 'स्वाती', Vishakha: 'विशाखा', Anuradha: 'अनुराधा', Jyeshtha: 'ज्येष्ठा', Mula: 'मूल', 'Purva Ashadha': 'पूर्वाषाढ़ा', 'Uttara Ashadha': 'उत्तराषाढ़ा', Shravana: 'श्रवण', Dhanishtha: 'धनिष्ठा', Shatabhisha: 'शतभिषा', 'Purva Bhadrapada': 'पूर्वाभाद्रपद', 'Uttara Bhadrapada': 'उत्तराभाद्रपद', Revati: 'रेवती', sidereal: 'नाक्षत्रिक', citra: 'चित्रा', 'Drik Panchanga': 'द्रिक पंचांग', Pūrva: 'पूर्व', Pūrvābhādrā: 'पूर्वाभाद्रपद', Uttaraphalgunī: 'उत्तराफाल्गुनी', Puṣya: 'पुष्य', Gaṇḍa: 'गण्ड', Viṣṭi: 'विष्टि', Revatī: 'रेवती', Rohiṇī: 'रोहिणी', Uttarābhādrā: 'उत्तराभाद्रपद', Cittā: 'चित्रा', Svāti: 'स्वाती', Āśleṣā: 'आश्लेषा', Dhaniṣṭhā: 'धनिष्ठा', Maghā: 'मघा', Janmashtami: 'जन्माष्टमी', 'Rishi Panchami': 'ऋषि पंचमी', 'Ananta Chaturdashi': 'अनंत चतुर्दशी', 'Sama Upakarma': 'साम उपाकर्म', 'Swarna Gowri Vrata': 'स्वर्ण गौरी व्रत', 'Ganesha Chaturthi': 'गणेश चतुर्थी', 'Rig Upakarma': 'ऋग्वेद उपाकर्म', 'Yajur Upakarma': 'यजुर्वेद उपाकर्म' }; return values[value] || value; },
+    localize(value, baseValue = (item) => item) {
+      if (this.locale !== 'hi' || value === null || value === undefined) return value;
+      const replacements = {
+        'Kṛṣṇa pakṣa': 'कृष्ण पक्ष', 'Śukla pakṣa': 'शुक्ल पक्ष', 'Kṛṣṇa': 'कृष्ण', 'Śukla': 'शुक्ल', 'Āśleṣā': 'आश्लेषा', 'Sādhya': 'साध्य', 'Chitra-paksha': 'चित्रा-पक्ष', 'Revati-paksha': 'रेवती-पक्ष', 'Rohini-paksha': 'रोहिणी-पक्ष',
+        ekādaśī: 'एकादशी', dvādaśī: 'द्वादशी', trayodaśī: 'त्रयोदशी', caturdaśī: 'चतुर्दशी',
+        pratipadā: 'प्रतिपदा', dvitīyā: 'द्वितीया', tṛtīyā: 'तृतीया', caturthī: 'चतुर्थी', pañcamī: 'पंचमी',
+        ṣaṣṭhī: 'षष्ठी', saptamī: 'सप्तमी', aṣṭamī: 'अष्टमी', navamī: 'नवमी', daśamī: 'दशमी', pūrṇimā: 'पूर्णिमा',
+        Siddha: 'सिद्ध', Bava: 'बव', Balava: 'बालव', Kaulava: 'कौलव', Taitila: 'तैतिल', Gara: 'गर',
+        Vanija: 'वणिज', Vishti: 'विष्टि', Kimstughna: 'किंस्तुघ्न', Shakuni: 'शकुनि', Chatushpada: 'चतुष्पद',
+        'Rama Navami': 'राम नवमी', 'Hanuman Jayanti': 'हनुमान जयंती', 'Mesha Sankranti': 'मेष संक्रांति',
+        'Akshaya Tritiya': 'अक्षय तृतीया', 'Vata Savitri Purnima': 'वट सावित्री पूर्णिमा', 'Guru Purnima': 'गुरु पूर्णिमा',
+        'Naga Panchami': 'नाग पंचमी', 'Raksha Bandhan': 'रक्षा बंधन', Janmashtami: 'जन्माष्टमी',
+        'Rishi Panchami': 'ऋषि पंचमी', 'Ananta Chaturdashi': 'अनंत चतुर्दशी', 'Mahalaya Amavasya': 'महालया अमावस्या',
+        'Durga Ashtami': 'दुर्गा अष्टमी', Vijayadashami: 'विजयादशमी', 'Karwa Chauth': 'करवा चौथ',
+        'Dhana Trayodashi': 'धन त्रयोदशी', Deepavali: 'दीपावली', 'Surya Shashthi / Chhath': 'सूर्य षष्ठी / छठ',
+        'Gita Jayanti': 'गीता जयंती', Uttarayana: 'उत्तरायण', 'Vasanta Panchami': 'वसंत पंचमी', 'Ratha Saptami': 'रथ सप्तमी',
+        'Maha Shivaratri': 'महाशिवरात्रि', 'Kama Dahana (Holi)': 'काम दहन (होली)', Ugadi: 'उगादी',
+        'Vasavi Jayanti': 'वासवी जयंती', 'Narasimha Jayanti': 'नरसिंह जयंती', Dakshinayana: 'दक्षिणायन',
+        'Varamahalakshmi Vrata': 'वरमहालक्ष्मी व्रत', 'Rig Upakarma': 'ऋगुपाकर्म', 'Yajur Upakarma': 'यजुर्वेद उपाकर्म',
+        'Sama Upakarma': 'साम उपाकर्म', Onam: 'ओणम', 'Swarna Gowri Vrata': 'स्वर्ण गौरी व्रत',
+        'Ganesha Chaturthi': 'गणेश चतुर्थी', 'Ayudha Puja': 'आयुध पूजा', 'Naraka Chaturdashi': 'नरक चतुर्दशी',
+        'Bali Padyami': 'बलि पाड्यमी', 'Vaikuntha Ekadashi': 'वैकुंठ एकादशी', 'Makara Sankranti': 'मकर संक्रांति',
+        'Vasavi Atmarpana': 'वासवी आत्मार्पण', 'VSN Jayanti': 'विष्णु सहस्रनाम जयंती',
+        'panchanga.tithi': 'पंचांग · तिथि', 'panchanga.nakshatra': 'पंचांग · नक्षत्र', 'panchanga.yoga': 'पंचांग · योग', 'panchanga.karana': 'पंचांग · करण', 'festival_rules.py': 'पर्व नियम',
+        tithi: 'तिथि', nakshatra: 'नक्षत्र', yoga: 'योग', karana: 'करण', festival: 'पर्व'
+      };
+      const rawValue = String(value);
+      return Object.entries(replacements).reduce((text, [source, target]) => text.replaceAll(source, target), baseValue(value) || rawValue);
+    },
     knowledge(topic) { return { title: this.t(`knowledge.${topic.slug}.title`, { fallback: topic.title }), summary: this.t(`knowledge.${topic.slug}.summary`, { fallback: topic.summary }), body: this.t(`knowledge.${topic.slug}.body`, { fallback: topic.body }) }; },
     async get(url) { const response = await fetch(url); let data; try { data = await response.json(); } catch { throw new Error(this.t('common.error')); } if (!response.ok) throw new Error(data.error || this.t('common.error')); return data; },
     query(params) { return new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== '')); },
@@ -37,6 +66,8 @@
     setStatus(message, error = false) { const status = document.getElementById('status'); if (status) { status.textContent = message; status.className = error ? 'status error' : 'status'; } },
     setLoading(target, message = this.t('common.loading')) { const node = typeof target === 'string' ? document.getElementById(target) : target; if (node) node.innerHTML = `<div class="loading" role="status">${this.esc(message)}</div>`; },
   };
+  const baseValue = window.Ghadi.value.bind(window.Ghadi);
+  window.Ghadi.value = (value) => window.Ghadi.localize(value, baseValue);
   const openLocation = () => { const dialog = document.getElementById('location-dialog'); const input = document.getElementById('global-city'); if (!dialog || !input) return; input.value = window.Ghadi.city; dialog.showModal(); input.focus(); input.select(); };
   const dialog = document.getElementById('location-dialog');
   document.querySelectorAll('[data-location-open]').forEach((button) => button.addEventListener('click', openLocation));
