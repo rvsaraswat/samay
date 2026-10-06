@@ -256,7 +256,7 @@ button:hover, .button:hover { filter: brightness(1.08); }
 .cosmic-chart-scale { min-height: 20px; margin: 0 auto 7px; color: var(--cosmic-muted); font-size: .7rem; text-align: center; }
 .chart-distance-ring { position: absolute; left: 50%; top: 50%; width: var(--ring-radius); aspect-ratio: 1; transform: translate(-50%, -50%); border: 1px dashed rgba(98,197,208,.3); border-radius: 50%; pointer-events: none; }
 .chart-distance-ring::after { content: ""; position: absolute; right: -3px; top: 50%; width: 5px; height: 5px; border-radius: 50%; background: var(--cosmic-amber); }
-.cosmic-wheel-panel .wheel { transform: scale(var(--chart-scale, 1)); transition: transform .2s ease; }
+.cosmic-wheel-panel .wheel, .birth-sidereal .wheel { transform: scale(var(--chart-scale, 1)); transition: transform .2s ease; }
 .wheel-sign.is-current { color: var(--cosmic-amber); font-weight: 800; text-shadow: 0 0 9px rgba(233,168,76,.8); }
 .wheel-planet .planet-glyph { font-size: 1.1rem; line-height: 1; }
 .wheel-planet .planet-label { position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); color: var(--cosmic-muted); font-size: .5rem; font-weight: 600; white-space: nowrap; }
@@ -264,7 +264,7 @@ button:hover, .button:hover { filter: brightness(1.08); }
 .chart-distance .wheel-planet, .chart-orbit .wheel-planet { width: 38px; height: 38px; }
 .chart-distance .wheel-center, .chart-orbit .wheel-center { color: var(--cosmic-cyan); }
 .chart-distance-value { display: block; margin-top: 7px; color: var(--cosmic-amber); }
-.cosmic-wheel-panel .planet-detail { display: block; }
+.cosmic-wheel-panel .planet-detail, .birth-sidereal .planet-detail { display: block; }
 .cosmic-wheel-panel .wheel-center, .birth-sidereal .wheel-center { color: var(--cosmic-amber); }
 .cosmic-wheel-panel .wheel-planet, .birth-sidereal .wheel-planet { border-color: var(--cosmic-cyan); background: #102b43; color: var(--cosmic-text); box-shadow: 0 0 10px rgba(98,197,208,.25); }
 :is(.cosmic-wheel-panel, .birth-sidereal) .wheel-planet.planet-surya { --planet-color: #f6c453; border-color: #f6c453; background: #493b1d; color: #ffe7a0; box-shadow: 0 0 8px #f6c453, 0 0 22px rgba(246,196,83,.72); }
