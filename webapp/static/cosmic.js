@@ -22,7 +22,73 @@ Ghadi.ready.then(() => {
   function renderFestivals(items, locationName, year, currentDate = '', yearItems = items) { const list = $('running-festivals'); if (!list) return; $('festival-location').textContent = locationName; const sortItems = (source) => (source || []).filter((item) => item.name && item.date && item.date !== 'None' && regionAllowsFestival(item)).sort((a, b) => Date.parse(`${a.date} ${year}`) - Date.parse(`${b.date} ${year}`)); const sorted = sortItems(items); const visible = sorted.slice(0, 4); list.innerHTML = visible.length ? visible.map((item) => `<div class="festival-mini-item"><strong>${esc(Ghadi.value(item.name))}</strong><span>${esc(formatFestivalDate(item.date, year))}</span></div>`).join('') : `<span class="muted">${esc(Ghadi.t('home.noFestivals'))}</span>`; if (mode === 'today') { const upcoming = document.getElementById('upcoming-festival') || document.createElement('div'); upcoming.id = 'upcoming-festival'; upcoming.className = 'upcoming-festival'; const todayStamp = currentDate ? Date.parse(`${currentDate.split('/')[2]}-${currentDate.split('/')[1]}-${currentDate.split('/')[0]}`) : Date.now(); const next = sortItems(yearItems).find((item) => Date.parse(`${year}-${item.date}`) >= todayStamp); upcoming.innerHTML = `<strong>${esc(Ghadi.t('home.upcomingFestival'))}</strong><span>${next ? `${esc(Ghadi.value(next.name))} · ${esc(formatFestivalDate(next.date, year))}` : esc(Ghadi.t('home.noUpcomingFestival'))}</span>`; if (!upcoming.parentElement) list.parentElement.append(upcoming); } }
   async function loadFestivals(date, locationName) { try { const [, month, year] = date.split('/'); const [data, yearData] = await Promise.all([Ghadi.get(`/api/cosmic/month/${Number(month)}?year=${year}&city=${encodeURIComponent(Ghadi.city)}`), Ghadi.get(`/api/cosmic/year/${year}?city=${encodeURIComponent(Ghadi.city)}`)]); festivalItems = data.festivals || []; festivalYearItems = yearData.festivals || festivalItems; renderFestivals(festivalItems, locationName, year, date, festivalYearItems); renderCalendar(festivalItems, year, month); } catch { festivalItems = []; festivalYearItems = []; renderFestivals([], locationName, date.split('/')[2], date); } }
 
+  const chartState = { mode: 'rashi', days: 0, playing: false, labels: true, heliocentric: false, zoom: 1, planets: [], timer: null };
+  const planetIcons = { Surya: '☉', Candra: '☾', Mangala: '♂', Budha: '☿', Guru: '♃', Sukra: '♀', Sani: '♄', Rahu: '☊', Ketu: '☋', Uranus: '♅', Neptune: '♆' };
+  const chartPlanetKey = (name) => ({ Surya: 'surya', Candra: 'chandra', Mangala: 'mangala', Budha: 'budha', Guru: 'guru', Sukra: 'shukra', Sani: 'shani', Rahu: 'rahu', Ketu: 'ketu', Uranus: 'uranus', Neptune: 'neptune' }[name] || 'other');
+  const chartText = (key, fallback) => Ghadi.t(`chart.${key}`, { fallback });
+  function showInteractivePlanet(planet) {
+    const panel = $('planet-detail');
+    if (!panel) return;
+    const distance = planet.distance_au == null ? chartText('calculatedPoint', 'Calculated point') : `${planet.distance_au.toFixed(6)} AU · ${(planet.distance_au * 149597870.7).toLocaleString(Ghadi.locale === 'hi' ? 'hi-IN' : 'en-US', { maximumFractionDigits: 0 })} km`;
+    panel.innerHTML = `<div class="panel-kicker">${esc(Ghadi.value(planet.planet))}</div><strong>${planet.longitude.toFixed(3)}° · ${esc(Ghadi.value(planet.rashi || '—'))}</strong><p class="muted">${esc(Ghadi.value(planet.nakshatra || '—'))} · ${planet.retrograde ? Ghadi.t('common.retrograde') : Ghadi.t('common.direct')}</p><small class="chart-distance-value">${esc(distance)}</small>`;
+  }
+  function chartRadius(planet, minDistance, maxDistance) {
+    if (planet.distance_au == null) return 30;
+    const min = Math.log10(Math.max(minDistance, 0.0001));
+    const max = Math.log10(Math.max(maxDistance, 0.0002));
+    return 22 + ((Math.log10(planet.distance_au) - min) / (max - min)) * 24;
+  }
+  function renderInteractiveChart(planets) {
+    const wheel = $('wheel');
+    if (!wheel) return;
+    chartState.planets = planets;
+    const useHelio = chartState.heliocentric && chartState.mode !== 'rashi';
+    const visible = planets.map((planet) => ({ ...planet, chartLongitude: (useHelio && planet.heliocentric_longitude != null ? planet.heliocentric_longitude : planet.longitude) + planet.speed * chartState.days })).filter((planet) => Number.isFinite(planet.chartLongitude));
+    const signs = ['Mesha', 'Vrsabha', 'Mithuna', 'Karkata', 'Simha', 'Kanya', 'Tula', 'Vrscika', 'Dhanu', 'Makara', 'Kumbha', 'Mina'];
+    const nakshatras = [['Ashwini', 'Ash'], ['Bharani', 'Bha'], ['Krittika', 'Kri'], ['Rohini', 'Roh'], ['Mrigashira', 'Mri'], ['Ardra', 'Ard'], ['Punarvasu', 'Pun'], ['Pushya', 'Pus'], ['Ashlesha', 'Ash'], ['Magha', 'Mag'], ['Purva Phalguni', 'Pha'], ['Uttara Phalguni', 'UPh'], ['Hasta', 'Has'], ['Chitra', 'Chi'], ['Swati', 'Swa'], ['Vishakha', 'Vis'], ['Anuradha', 'Anu'], ['Jyeshtha', 'Jye'], ['Mula', 'Mul'], ['Purva Ashadha', 'PAs'], ['Uttara Ashadha', 'UAs'], ['Shravana', 'Shr'], ['Dhanishtha', 'Dha'], ['Shatabhisha', 'Sha'], ['Purva Bhadrapada', 'PBh'], ['Uttara Bhadrapada', 'UBh'], ['Revati', 'Rev']];
+    const currentSign = Math.floor((((visible.find((planet) => planet.planet === 'Surya') || visible[0])?.chartLongitude || 0) + 360) % 360 / 30);
+    const minDistance = Math.min(...planets.filter((planet) => planet.distance_au).map((planet) => planet.distance_au));
+    const maxDistance = Math.max(...planets.filter((planet) => planet.distance_au).map((planet) => planet.distance_au));
+    wheel.className = `wheel chart-${chartState.mode}${chartState.labels ? '' : ' hide-chart-labels'}`;
+    wheel.style.setProperty('--chart-scale', chartState.zoom);
+    wheel.innerHTML = `<span class="wheel-center">${esc(chartText('earth', 'Earth'))}</span>`;
+    if (chartState.mode === 'distance' || chartState.mode === 'orbit') {
+      [22, 32, 42].forEach((radius) => { const ring = document.createElement('span'); ring.className = 'chart-distance-ring'; ring.style.setProperty('--ring-radius', `${radius}%`); ring.title = chartText('logScale', 'Logarithmic distance scale'); wheel.append(ring); });
+    } else {
+      nakshatras.forEach(([name, short], index) => { const angle = (index * (360 / nakshatras.length) - 90) * Math.PI / 180; const node = document.createElement('span'); node.className = 'wheel-nakshatra'; node.style = `--x:${Math.cos(angle) * 46}%;--y:${Math.sin(angle) * 46}%`; node.title = Ghadi.value(name); node.textContent = Ghadi.value(name).slice(0, Ghadi.locale === 'hi' ? 3 : short.length); wheel.append(node); });
+      signs.forEach((sign, index) => { const angle = (index * 30 - 90) * Math.PI / 180; const node = document.createElement('span'); node.className = `wheel-sign${index === currentSign ? ' is-current' : ''}`; node.style = `--x:${Math.cos(angle) * 42}%;--y:${Math.sin(angle) * 42}%`; node.textContent = Ghadi.value(sign); wheel.append(node); });
+    }
+    visible.forEach((planet) => { const angle = ((planet.chartLongitude % 360) - 90) * Math.PI / 180; const radius = chartState.mode === 'rashi' ? 29 : chartRadius(planet, minDistance, maxDistance); const node = document.createElement('button'); node.type = 'button'; node.className = `wheel-planet planet-${chartPlanetKey(planet.planet)}`; node.style = `--x:${Math.cos(angle) * radius}%;--y:${Math.sin(angle) * radius}%`; node.title = `${Ghadi.value(planet.planet)}: ${planet.longitude.toFixed(2)}°`; node.innerHTML = `<span class="planet-glyph">${planetIcons[planet.planet] || '✦'}</span><span class="planet-label">${esc(Ghadi.value(planet.planet))}</span>`; node.addEventListener('click', () => showInteractivePlanet(planet)); wheel.append(node); });
+    const scale = $('chart-scale');
+    if (scale) scale.textContent = chartState.mode === 'rashi' ? chartText('siderealScale', 'Sidereal longitude · 12 Rashis · 27 Nakshatras') : `${chartText('logScale', 'Logarithmic distance scale')} · ${chartText('au', 'AU')} · ${chartState.heliocentric ? chartText('heliocentric', 'Heliocentric') : chartText('geocentric', 'Geocentric')}`;
+  }
+  function setupChartControls() {
+    const panel = document.querySelector('.cosmic-wheel-panel');
+    const anchor = panel?.querySelector('.cosmic-wheel-wrap');
+    if (!panel || !anchor || document.getElementById('chart-controls')) return;
+    const controls = document.createElement('div');
+    controls.id = 'chart-controls';
+    controls.className = 'chart-controls';
+    controls.innerHTML = `<div class="chart-mode" role="tablist"><button type="button" class="active" data-chart-mode="rashi">${chartText('rashi', 'Rashi')}</button><button type="button" data-chart-mode="distance">${chartText('distance', 'Distance')}</button><button type="button" data-chart-mode="orbit">${chartText('orbit', 'Orbit')}</button></div><div class="chart-actions"><button type="button" id="chart-play" title="${chartText('play', 'Play')}">▶</button><button type="button" id="chart-reset" title="${chartText('reset', 'Reset')}">↺</button><button type="button" id="chart-zoom-out" aria-label="Zoom out">−</button><button type="button" id="chart-zoom-in" aria-label="Zoom in">+</button><label><input id="chart-labels" type="checkbox" checked> ${chartText('labels', 'Labels')}</label><label><input id="chart-heliocentric" type="checkbox"> ${chartText('heliocentric', 'Heliocentric')}</label></div><label class="chart-time"><span>${chartText('time', 'Time offset')}</span><input id="chart-time" type="range" min="-30" max="30" step="0.25" value="0"><output id="chart-time-value">${chartText('now', 'Now')}</output></label>`;
+    const scale = document.createElement('div');
+    scale.id = 'chart-scale';
+    scale.className = 'cosmic-chart-scale';
+    panel.insertBefore(controls, anchor);
+    panel.insertBefore(scale, anchor);
+    controls.addEventListener('click', (event) => { const mode = event.target.closest('[data-chart-mode]')?.dataset.chartMode; if (!mode) return; chartState.mode = mode; controls.querySelectorAll('[data-chart-mode]').forEach((button) => button.classList.toggle('active', button.dataset.chartMode === mode)); renderInteractiveChart(chartState.planets); });
+    $('chart-play').onclick = () => { chartState.playing = !chartState.playing; $('chart-play').textContent = chartState.playing ? '❚❚' : '▶'; if (chartState.playing && !chartState.timer) chartState.timer = setInterval(() => { chartState.days = (chartState.days + .25) % 31; $('chart-time').value = chartState.days; $('chart-time-value').textContent = chartState.days ? `${chartState.days > 0 ? '+' : ''}${chartState.days}d` : chartText('now', 'Now'); renderInteractiveChart(chartState.planets); }, 500); if (!chartState.playing && chartState.timer) { clearInterval(chartState.timer); chartState.timer = null; } };
+    $('chart-reset').onclick = () => { chartState.days = 0; chartState.zoom = 1; chartState.heliocentric = false; $('chart-time').value = 0; $('chart-time-value').textContent = chartText('now', 'Now'); $('chart-heliocentric').checked = false; renderInteractiveChart(chartState.planets); };
+    $('chart-time').oninput = (event) => { chartState.days = Number(event.target.value); $('chart-time-value').textContent = chartState.days ? `${chartState.days > 0 ? '+' : ''}${chartState.days}d` : chartText('now', 'Now'); renderInteractiveChart(chartState.planets); };
+    $('chart-labels').onchange = (event) => { chartState.labels = event.target.checked; renderInteractiveChart(chartState.planets); };
+    $('chart-heliocentric').onchange = (event) => { chartState.heliocentric = event.target.checked; renderInteractiveChart(chartState.planets); };
+    $('chart-zoom-in').onclick = () => { chartState.zoom = Math.min(1.35, chartState.zoom + .1); renderInteractiveChart(chartState.planets); };
+    $('chart-zoom-out').onclick = () => { chartState.zoom = Math.max(.75, chartState.zoom - .1); renderInteractiveChart(chartState.planets); };
+  }
+  setupChartControls();
   function renderWheel(planets) {
+    renderInteractiveChart(planets);
+  }
+  function renderLegacyWheel(planets) {
     const wheel = $('wheel');
     if (!wheel) return;
     const planetKey = (name) => ({ Surya: 'surya', Candra: 'chandra', Mangala: 'mangala', Budha: 'budha', Guru: 'guru', Sukra: 'shukra', Sani: 'shani', Rahu: 'rahu', Ketu: 'ketu', Uranus: 'uranus', Neptune: 'neptune' }[name] || 'other');

@@ -82,11 +82,23 @@ def _planet_rows(location, civil, coordinate_selection="citra", hour=12.0):
         finally:
           panchanga.reset_ayanamsa_mode()
         latitude = float(values[1])
+        distance_au = float(values[2])
+        try:
+          helio_values, _ = panchanga.swe.calc_ut(
+              jd_ut, planet, flags=flags | panchanga.swe.FLG_HELCTR)
+          heliocentric_longitude = float(helio_values[0]) % 360.0
+        except Exception:
+          heliocentric_longitude = None
+      else:
+        distance_au = None
+        heliocentric_longitude = None
       rows.append({
         "planet": label,
         "body": int(planet),
         "longitude": round(longitude, 8),
         "latitude": round(latitude, 8),
+        "distance_au": round(distance_au, 9) if distance_au is not None else None,
+        "heliocentric_longitude": round(heliocentric_longitude, 8) if heliocentric_longitude is not None else None,
         "rashi_number": rashi,
         "rashi": names["zodiac"][str(rashi - 1)],
         "nakshatra_number": nakshatra,

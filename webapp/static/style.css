@@ -243,6 +243,28 @@ button:hover, .button:hover { filter: brightness(1.08); }
 .cosmic-wheel-panel .wheel-sign, .birth-sidereal .wheel-sign { color: #b8c9d8; font-size: .59rem; }
 .cosmic-wheel-panel .wheel-nakshatra, .birth-sidereal .wheel-nakshatra { color: var(--cosmic-cyan); font-size: .47rem; text-shadow: 0 0 8px rgba(98,197,208,.45); }
 .cosmic-wheel-panel .planet-detail { display: none; }
+.chart-controls { display: grid; gap: 10px; margin: -2px 0 12px; }
+.chart-mode { display: inline-flex; width: fit-content; gap: 3px; padding: 3px; border: 1px solid var(--cosmic-line); border-radius: 7px; background: rgba(7,17,31,.55); }
+.chart-mode button, .chart-actions button { min-height: 30px; padding: 5px 10px; border: 0; border-radius: 5px; background: transparent; color: var(--cosmic-muted); font-size: .72rem; font-weight: 700; }
+.chart-mode button.active, .chart-actions button:hover { background: var(--cosmic-panel-2); color: var(--cosmic-text); }
+.chart-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.chart-actions label, .chart-time { display: inline-flex; align-items: center; gap: 5px; color: var(--cosmic-muted); font-size: .7rem; font-weight: 600; }
+.chart-actions input { min-height: 0; width: auto; accent-color: var(--cosmic-cyan); }
+.chart-time { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; }
+.chart-time input { width: 100%; min-height: 0; accent-color: var(--cosmic-amber); }
+.chart-time output { min-width: 34px; color: var(--cosmic-amber); text-align: right; }
+.cosmic-chart-scale { min-height: 20px; margin: 0 auto 7px; color: var(--cosmic-muted); font-size: .7rem; text-align: center; }
+.chart-distance-ring { position: absolute; left: 50%; top: 50%; width: var(--ring-radius); aspect-ratio: 1; transform: translate(-50%, -50%); border: 1px dashed rgba(98,197,208,.3); border-radius: 50%; pointer-events: none; }
+.chart-distance-ring::after { content: ""; position: absolute; right: -3px; top: 50%; width: 5px; height: 5px; border-radius: 50%; background: var(--cosmic-amber); }
+.cosmic-wheel-panel .wheel { transform: scale(var(--chart-scale, 1)); transition: transform .2s ease; }
+.wheel-sign.is-current { color: var(--cosmic-amber); font-weight: 800; text-shadow: 0 0 9px rgba(233,168,76,.8); }
+.wheel-planet .planet-glyph { font-size: 1.1rem; line-height: 1; }
+.wheel-planet .planet-label { position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); color: var(--cosmic-muted); font-size: .5rem; font-weight: 600; white-space: nowrap; }
+.wheel.hide-chart-labels .wheel-sign, .wheel.hide-chart-labels .wheel-nakshatra, .wheel.hide-chart-labels .planet-label { display: none; }
+.chart-distance .wheel-planet, .chart-orbit .wheel-planet { width: 38px; height: 38px; }
+.chart-distance .wheel-center, .chart-orbit .wheel-center { color: var(--cosmic-cyan); }
+.chart-distance-value { display: block; margin-top: 7px; color: var(--cosmic-amber); }
+.cosmic-wheel-panel .planet-detail { display: block; }
 .cosmic-wheel-panel .wheel-center, .birth-sidereal .wheel-center { color: var(--cosmic-amber); }
 .cosmic-wheel-panel .wheel-planet, .birth-sidereal .wheel-planet { border-color: var(--cosmic-cyan); background: #102b43; color: var(--cosmic-text); box-shadow: 0 0 10px rgba(98,197,208,.25); }
 :is(.cosmic-wheel-panel, .birth-sidereal) .wheel-planet.planet-surya { --planet-color: #f6c453; border-color: #f6c453; background: #493b1d; color: #ffe7a0; box-shadow: 0 0 8px #f6c453, 0 0 22px rgba(246,196,83,.72); }
